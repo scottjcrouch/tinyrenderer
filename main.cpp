@@ -92,79 +92,61 @@ void lesson1()
     image.write_tga_file("output.tga");
 }
 
-void drawTriangle(std::array<Vec2i,3> verts, TGAImage &image, TGAColor color)
+void drawTriangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, TGAColor color)
 {
-    drawLine(verts[0], verts[1], image, color);
-    drawLine(verts[1], verts[2], image, color);
-    drawLine(verts[2], verts[0], image, color);
+    drawLine(a, b, image, color);
+    drawLine(b, c, image, color);
+    drawLine(c, a, image, color);
 }
 
-void fillTriangle(std::array<Vec2i,3> verts, TGAImage &image, TGAColor color)
+void fillTriangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, TGAColor color)
 {
-    // Sort the vertices by y and x coords.
-    std::sort(verts.begin(),
-              verts.end(),
-              [] (auto v0, auto v1) {
-                  if (v0.y == v1.y) {
-                      return v0.x < v1.x;
-                  } else {
-                      return v0.y < v1.y;
-                  }
-              });
+    // Get the cross product of vectors ab and ac.  We will use this to check
+    // whether the angle between them is positive, negative or 0.
+    Vec3i abacCrossProd = crossProd(b - a, c - a);
 
-    // If any vertices overlap, then the area of the triangle is zero, so we
-    // don't need to draw anything and can return early.
-    if (std::adjacent_find(verts.begin(), verts.end()) != verts.end()) {
+    // If the angle between ab and ac is 0 or 180, it means the three vertices
+    // of the triangle are collinear, so the area of the triangle is zero
+    // (there's nothing for us to draw).
+    if (abacCrossProd.z == 0) {
         return;
     }
 
-    // Get the cross product of vectors of vert0 -> vert1 and vert 0 -> vert
-    // 2.  We will use this to check whether the angle between them is
-    // positive, negative or 0.
-    auto crossP = cross(verts[1] - verts[0], verts[2] - verts[0]);
-
-    // If the three vertices are collinear, then the area of the triangle is
-    // zero, so we don't need to draw anything.
-    if (crossP.z == 0) {
-        return;
+    // We will iterate over every pixel around the triangle, and fill it only
+    // if it lies on the inside of the triangle's three edges (a->b, b->c,
+    // c->a).  We will assume that the right hand side of each edge vector is
+    // the "inside".  In order for this to be the case, the angle between ab
+    // and ac must be positive.  If this is not so, then we swap b and c.
+    if (abacCrossProd.z < 0) {
+        std::swap(b, c);
     }
 
-    // Since the order of the points should not affect the fill, we must first
-    // rearrange the order of the three vertices so that the right hand side
-    // of each line connecting them is always the triangle interior.
-    if (crossP.z < 0) {
-        std::swap(verts[1], verts[2]);
-    }
+    // To test whether a pixel is on the inside of all three edges, we compute
+    // the dot product of the perpendicular of each edge * the vector made by
+    // the pixel.
 
-    // For each pixel, we will fill it only if it lies on the inside of the
-    // three edges.  Thanks to the code above, we can assume that the right
-    // hand side of the vector defining each edge is the inside.  In this
-    // case, to test whether a pixel is on the inside of all three edges, we
-    // compute the dot product of the perpendicular for each edge * the vector
-    // made by the pixel.
-
-    // Get the edge vectors.
-    Vec2i vec0(verts[1] - verts[0]);
-    Vec2i vec1(verts[2] - verts[1]);
-    Vec2i vec2(verts[0] - verts[2]);
+    // Get the vectors for the three edges.
+    Vec2i ab(b - a);
+    Vec2i bc(c - b);
+    Vec2i ca(a - c);
 
     // Get their perpendiculars.
-    Vec2i perp0(perp(vec0));
-    Vec2i perp1(perp(vec1));
-    Vec2i perp2(perp(vec2));
+    Vec2i abPerp(perp(ab));
+    Vec2i bcPerp(perp(bc));
+    Vec2i caPerp(perp(ca));
 
     // Get the bounds of the square the triangle lies inside.
-    int xMin = std::min({ verts[0].x, verts[1].x, verts[2].x });
-    int yMin = std::min({ verts[0].y, verts[1].y, verts[2].y });
-    int xMax = std::max({ verts[0].x, verts[1].x, verts[2].x });
-    int yMax = std::max({ verts[0].y, verts[1].y, verts[2].y });
+    int xMin = std::min({ a.x, b.x, c.x });
+    int yMin = std::min({ a.y, b.y, c.y });
+    int xMax = std::max({ a.x, b.x, c.x });
+    int yMax = std::max({ a.y, b.y, c.y });
 
-    // TODO: Start filling!
     for (int y = yMin; y <= yMax; y++) {
         for (int x = xMin; x <= xMax; x++) {
-            if (dot(perp0, Vec2i(x, y) - verts[0]) > 0 &&
-                dot(perp1, Vec2i(x, y) - verts[1]) > 0 &&
-                dot(perp2, Vec2i(x, y) - verts[2]) > 0) {
+            Vec2i pixel(x,y);
+            if (dotProd(abPerp, pixel - a) >= 0 &&
+                dotProd(bcPerp, pixel - b) >= 0 &&
+                dotProd(caPerp, pixel - c) >= 0) {
                 image.set(x, y, color);
             }
         }
@@ -177,12 +159,9 @@ void lesson2()
     const int height = 200;
     TGAImage image(width, height, TGAImage::RGB);
 
-    std::array<Vec2i,3>t0{Vec2i(10, 70),   Vec2i(50, 160),  Vec2i(70, 80)};
-    std::array<Vec2i,3>t1{Vec2i(180, 50),  Vec2i(150, 1),   Vec2i(70, 180)};
-    std::array<Vec2i,3>t2{Vec2i(180, 150), Vec2i(120, 160), Vec2i(130, 180)};
-    fillTriangle(t0, image, red);
-    fillTriangle(t1, image, green);
-    fillTriangle(t2, image, blue);
+    fillTriangle(Vec2i(10, 70), Vec2i(50, 160), Vec2i(70, 80), image, red);
+    fillTriangle(Vec2i(180, 50), Vec2i(150, 1), Vec2i(70, 180), image, green);
+    fillTriangle(Vec2i(180, 150), Vec2i(120, 160), Vec2i(130, 180), image, blue);
 
     image.flip_vertically();
     image.write_tga_file("output.tga");

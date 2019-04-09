@@ -8,6 +8,7 @@ struct Vec2
 {
     union {
         struct { T x, y; };
+        struct { T u, v; };
         T raw[2];
     };
     Vec2() : x(0), y(0) { }
@@ -22,6 +23,7 @@ struct Vec3
 {
     union {
         struct { T x, y, z; };
+        struct { T x, y, w; };
         T raw[3];
     };
     Vec3() : x(0), y(0), z(0) { }
@@ -50,13 +52,13 @@ Vec2<T> perp(const Vec2<T> &a)
 }
 
 template <class T>
-T dot(Vec2<T> a, Vec2<T> b)
+T dotProd(Vec2<T> a, Vec2<T> b)
 {
     return a.x*b.x + a.y*b.y;
 }
 
 template <class T>
-Vec3<T> cross(Vec2<T> a, Vec2<T> b)
+Vec3<T> crossProd(Vec2<T> a, Vec2<T> b)
 {
     return Vec3<T>(a.y - b.y, b.x - a.x, a.x*b.y - a.y*b.x);
 }
