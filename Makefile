@@ -1,5 +1,5 @@
 SYSCONF_LINK = g++
-CPPFLAGS     = -std=c++14 -Werror -ggdb -g -pg -O0
+CPPFLAGS     = -std=c++14 -ggdb -g -pg -O0
 LDFLAGS      = -pg
 LIBS         = -lm
 
