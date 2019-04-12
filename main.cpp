@@ -101,53 +101,29 @@ void drawTriangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, TGAColor color)
 
 void fillTriangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, TGAColor color)
 {
-    // Get the cross product of vectors ab and ac.  We will use this to check
-    // whether the angle between them is positive, negative or 0.
-    Vec3i abacCrossProd = crossProd(b - a, c - a);
+    Vec2i ab(b-a);
+    Vec2i ac(c-a);
 
-    // If the angle between ab and ac is 0 or 180, it means the three vertices
-    // of the triangle are collinear, so the area of the triangle is zero
-    // (there's nothing for us to draw).
-    if (abacCrossProd.z == 0) {
+    // If the triangle is degenerate, or its vertices are collinear, then
+    // don't draw anything.
+    if (crossProd(ac,ab).z <= 0) {
         return;
     }
 
-    // We will iterate over every pixel around the triangle, and fill it only
-    // if it lies on the inside of the triangle's three edges (a->b, b->c,
-    // c->a).  We will assume that the right hand side of each edge vector is
-    // the "inside".  In order for this to be the case, the angle between ab
-    // and ac must be positive.  If this is not so, then we swap b and c.
-    if (abacCrossProd.z < 0) {
-        std::swap(b, c);
-    }
-
-    // To test whether a pixel is on the inside of all three edges, we compute
-    // the dot product of the perpendicular of each edge * the vector made by
-    // the pixel.
-
-    // Get the vectors for the three edges.
-    Vec2i ab(b - a);
-    Vec2i bc(c - b);
-    Vec2i ca(a - c);
-
-    // Get their perpendiculars.
-    Vec2i abPerp(perp(ab));
-    Vec2i bcPerp(perp(bc));
-    Vec2i caPerp(perp(ca));
-
-    // Get the bounds of the square the triangle lies inside.
     int xMin = std::min({ a.x, b.x, c.x });
     int yMin = std::min({ a.y, b.y, c.y });
     int xMax = std::max({ a.x, b.x, c.x });
     int yMax = std::max({ a.y, b.y, c.y });
 
-    for (int y = yMin; y <= yMax; y++) {
-        for (int x = xMin; x <= xMax; x++) {
-            Vec2i pixel(x,y);
-            if (dotProd(abPerp, pixel - a) >= 0 &&
-                dotProd(bcPerp, pixel - b) >= 0 &&
-                dotProd(caPerp, pixel - c) >= 0) {
-                image.set(x, y, color);
+    Vec2i p;
+    for (p.y = yMin; p.y <= yMax; p.y++) {
+        for (p.x = xMin; p.x <= xMax; p.x++) {
+            Vec2i ap(p-a);
+            Vec2f bcoord = barycentric(ab, ac, ap);
+            if (bcoord.u >= 0 &&
+                bcoord.v >= 0 &&
+                bcoord.u + bcoord.v <= 1) {
+                image.set(p.x, p.y, color);
             }
         }
     }

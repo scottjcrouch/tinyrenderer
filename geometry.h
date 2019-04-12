@@ -23,7 +23,7 @@ struct Vec3
 {
     union {
         struct { T x, y, z; };
-        struct { T x, y, w; };
+        struct { T u, v, w; };
         T raw[3];
     };
     Vec3() : x(0), y(0), z(0) { }
@@ -60,7 +60,32 @@ T dotProd(Vec2<T> a, Vec2<T> b)
 template <class T>
 Vec3<T> crossProd(Vec2<T> a, Vec2<T> b)
 {
-    return Vec3<T>(a.y - b.y, b.x - a.x, a.x*b.y - a.y*b.x);
+    return Vec3<T>(a.y - b.y,
+                   b.x - a.x,
+                   a.x*b.y - a.y*b.x);
+}
+
+template <class T>
+Vec3<T> crossProd(Vec3<T> a, Vec3<T> b)
+{
+    return Vec3<T>(a.y*b.z - a.z*b.y,
+                   a.z*b.x - a.x*b.z,
+                   a.x*b.y - a.y*b.x);
+}
+
+template <class T>
+Vec2<float> barycentric(Vec2<T> ab, Vec2<T> ac, Vec2<T> ap)
+{
+    auto dotABAC = dotProd(ab,ac);
+    auto dotABAB = dotProd(ab,ab);
+    auto dotACAC = dotProd(ac,ac);
+    auto dotAPAB = dotProd(ap,ab);
+    auto dotAPAC = dotProd(ap,ac);
+    float invDenom = 1.0 / (dotACAC*dotABAB - dotABAC*dotABAC);
+    float u = ((dotABAB * dotAPAC) - (dotABAC * dotAPAB)) * invDenom;
+    float v = ((dotACAC * dotAPAB) - (dotABAC * dotAPAC)) * invDenom;
+
+    return Vec2<float>(u,v);
 }
 
 using Vec2f = Vec2<float>;
