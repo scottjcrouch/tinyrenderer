@@ -99,25 +99,61 @@ void drawTriangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, TGAColor color)
     drawLine(c, a, image, color);
 }
 
+void drawSquare(Vec2i min, Vec2i max, TGAImage &image, TGAColor color)
+{
+    drawLine({min.x, min.y}, {min.x, max.y}, image, color);
+    drawLine({min.x, min.y}, {max.x, min.y}, image, color);
+    drawLine({max.x, max.y}, {min.x, max.y}, image, color);
+    drawLine({max.x, max.y}, {max.x, min.y}, image, color);
+}
+
 void fillTriangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, TGAColor color)
 {
     Vec2i ab(b-a);
     Vec2i ac(c-a);
 
-    // If the triangle is degenerate, or its vertices are collinear, then
-    // don't draw anything.
+    // If the triangle's vertices are collinear, or inside-out, then don't
+    // draw anything.
     if (crossProd(ac,ab).z <= 0) {
         return;
     }
 
-    int xMin = std::min({ a.x, b.x, c.x });
-    int yMin = std::min({ a.y, b.y, c.y });
-    int xMax = std::max({ a.x, b.x, c.x });
-    int yMax = std::max({ a.y, b.y, c.y });
+    // Sort the vertices by y coord.
+    std::vector<Vec2i> verts{a, b, c};
+    std::sort(verts.begin(), verts.end(),
+              [] (auto a, auto b) {
+                  return a.y < b.y;
+              });
+
+    // Get the bounding boxes for the upper and lower halves of the triangle.
+    int totalHeight = verts[2].y - verts[0].y;
+    float t = ((float)(verts[1].y - verts[0].y) / totalHeight);
+    int widthBetween0and2 = verts[2].x - verts[0].x;
+    bool signBit = widthBetween0and2 < 0;
+    int xLerp = verts[0].x + (int)(t * widthBetween0and2 + (signBit ? -1 : 1));
+    Vec2i lowerBoxMin(std::min({ verts[0].x, verts[1].x, xLerp }),
+                      verts[0].y);
+    Vec2i lowerBoxMax(std::max({ verts[0].x, verts[1].x, xLerp }),
+                      verts[1].y);
+    Vec2i upperBoxMin(std::min({ verts[1].x, verts[2].x, xLerp }),
+                      verts[1].y + 1);
+    Vec2i upperBoxMax(std::max({ verts[1].x, verts[2].x, xLerp }),
+                      verts[2].y);
 
     Vec2i p;
-    for (p.y = yMin; p.y <= yMax; p.y++) {
-        for (p.x = xMin; p.x <= xMax; p.x++) {
+    for (p.y = lowerBoxMin.y; p.y <= lowerBoxMax.y; p.y++) {
+        for (p.x = lowerBoxMin.x; p.x <= lowerBoxMax.x; p.x++) {
+            Vec2i ap(p-a);
+            Vec2f bcoord = barycentric(ab, ac, ap);
+            if (bcoord.u >= 0 &&
+                bcoord.v >= 0 &&
+                bcoord.u + bcoord.v <= 1) {
+                image.set(p.x, p.y, color);
+            }
+        }
+    }
+    for (p.y = upperBoxMin.y; p.y <= upperBoxMax.y; p.y++) {
+        for (p.x = upperBoxMin.x; p.x <= upperBoxMax.x; p.x++) {
             Vec2i ap(p-a);
             Vec2f bcoord = barycentric(ab, ac, ap);
             if (bcoord.u >= 0 &&
