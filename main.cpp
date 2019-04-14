@@ -15,7 +15,6 @@ const TGAColor blue  = TGAColor(  0,   0, 255, 255);
 
 auto model(std::make_unique<Model>("obj/african_head.obj"));
 
-// Draw a dot on a 100x100 px tga image
 void lesson0()
 {
     TGAImage image(100, 100, TGAImage::RGB);
@@ -112,9 +111,9 @@ void fillTriangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, TGAColor color)
     Vec2i ab(b-a);
     Vec2i ac(c-a);
 
-    // If the triangle's vertices are collinear, or inside-out, then don't
-    // draw anything.
-    if (crossProd(ac,ab).z <= 0) {
+    // If the triangle's vertices are collinear, then we don't need to draw
+    // anything.
+    if (crossProd(ab, ac).z == 0) {
         return;
     }
 
@@ -167,13 +166,33 @@ void fillTriangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, TGAColor color)
 
 void lesson2()
 {
-    const int width  = 200;
-    const int height = 200;
+    const int width  = 800;
+    const int height = 800;
     TGAImage image(width, height, TGAImage::RGB);
 
-    fillTriangle(Vec2i(10, 70), Vec2i(50, 160), Vec2i(70, 80), image, red);
-    fillTriangle(Vec2i(180, 50), Vec2i(150, 1), Vec2i(70, 180), image, green);
-    fillTriangle(Vec2i(180, 150), Vec2i(120, 160), Vec2i(130, 180), image, blue);
+    for (int i = 0; i < model->numFaces(); i++) {
+        std::vector<int> face = model->face(i);
+        Vec3f worldCoords[3];
+        Vec2i screenCoords[3];
+        for (int j = 0; j < 3; j++) {
+            worldCoords[j] = model->vert(face[j]);
+            screenCoords[j] =
+                Vec2i((worldCoords[j].x + 1.0) * width / 2.0,
+                      (worldCoords[j].y + 1.0) * height / 2.0);
+        }
+
+        Vec3f lightVec(0, 0, -1);
+        Vec3f ab(worldCoords[1] - worldCoords[0]);
+        Vec3f ac(worldCoords[2] - worldCoords[0]);
+        Vec3f faceNormal = normalize(crossProd(ac, ab));
+        float intensity = dotProd(faceNormal, lightVec) * 255.0;
+        if (intensity > 0) { // Cull backfaces
+            TGAColor faceIllum = TGAColor(intensity, intensity, intensity, 255);
+            fillTriangle(screenCoords[0], screenCoords[1], screenCoords[2],
+                         image,
+                         faceIllum);
+        }
+    }
 
     image.flip_vertically();
     image.write_tga_file("output.tga");

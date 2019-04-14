@@ -15,6 +15,7 @@ struct Vec2
     Vec2(T _x, T _y) : x(_x), y(_y) { }
     inline Vec2<T> operator +(const Vec2<T> &v) const { return Vec2<T>(x+v.x, y+v.y); }
     inline Vec2<T> operator -(const Vec2<T> &v) const { return Vec2<T>(x-v.x, y-v.y); }
+    inline Vec2<T> operator *(T scalar) const { return Vec2<T>(scalar*x, scalar*y); }
     inline bool operator ==(const Vec2<T> &v) const { return x==v.x && y==v.y; }
 };
 
@@ -30,6 +31,7 @@ struct Vec3
     Vec3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) { }
     inline Vec3<T> operator +(const Vec3<T> &v) const { return Vec3<T>(x+v.x, y+v.y, z+v.z); }
     inline Vec3<T> operator -(const Vec3<T> &v) const { return Vec3<T>(x-v.x, y-v.y, z-v.z); }
+    inline Vec3<T> operator *(T scalar) const { return Vec3<T>(scalar*x, scalar*y, scalar*z); }
     inline bool operator ==(const Vec2<T> &v) const { return x==v.x && y==v.y && z==v.z; }
 };
 
@@ -58,6 +60,12 @@ T dotProd(Vec2<T> a, Vec2<T> b)
 }
 
 template <class T>
+T dotProd(Vec3<T> a, Vec3<T> b)
+{
+    return a.x*b.x + a.y*b.y + a.z*b.z;
+}
+
+template <class T>
 Vec3<T> crossProd(Vec2<T> a, Vec2<T> b)
 {
     return Vec3<T>(a.y - b.y,
@@ -74,6 +82,12 @@ Vec3<T> crossProd(Vec3<T> a, Vec3<T> b)
 }
 
 template <class T>
+Vec3<float> normalize(Vec3<T> a)
+{
+    return a * (1 / mag(a));
+}
+
+template <class T>
 Vec2<float> barycentric(Vec2<T> ab, Vec2<T> ac, Vec2<T> ap)
 {
     auto dotABAC = dotProd(ab,ac);
@@ -82,8 +96,8 @@ Vec2<float> barycentric(Vec2<T> ab, Vec2<T> ac, Vec2<T> ap)
     auto dotAPAB = dotProd(ap,ab);
     auto dotAPAC = dotProd(ap,ac);
     float invDenom = 1.0 / (dotACAC*dotABAB - dotABAC*dotABAC);
-    float u = ((dotABAB * dotAPAC) - (dotABAC * dotAPAB)) * invDenom;
-    float v = ((dotACAC * dotAPAB) - (dotABAC * dotAPAC)) * invDenom;
+    float u = ((dotACAC * dotAPAB) - (dotABAC * dotAPAC)) * invDenom;
+    float v = ((dotABAB * dotAPAC) - (dotABAC * dotAPAB)) * invDenom;
 
     return Vec2<float>(u,v);
 }
