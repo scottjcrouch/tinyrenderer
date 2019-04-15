@@ -22,16 +22,14 @@ struct Vec2
 
     inline Vec2<T> operator -(const Vec2<T> &v) const { return { x-v.x, y-v.y }; }
 
-    inline Vec2<int> operator *(int scalar) const { return { scalar*x, scalar*y }; }
+    inline Vec2<T> operator *(int scalar) const { return { scalar*x, scalar*y }; }
 
     inline Vec2<float> operator *(float scalar) const { return { scalar*x, scalar*y }; }
 
     inline T operator *(const Vec2<T> &v) const { return x*v.x + y*v.y; }
 
     inline Vec3<T> operator ^(const Vec2<T> &v) const {
-        return { y - v.y,
-                v.x - x,
-                x*v.y - y*v.x };
+        return { y - v.y, v.x - x, x*v.y - y*v.x };
     }
 
     inline bool operator ==(const Vec2<T> &v) const { return x==v.x && y==v.y; }
@@ -59,16 +57,14 @@ struct Vec3
 
     inline Vec3<T> operator -(const Vec3<T> &v) const { return { x-v.x, y-v.y, z-v.z }; }
 
-    inline Vec3<int> operator *(int scalar) const { return { scalar*x, scalar*y, scalar*z }; }
+    inline Vec3<T> operator *(int scalar) const { return { scalar*x, scalar*y, scalar*z }; }
 
     inline Vec3<float> operator *(float scalar) const { return { scalar*x, scalar*y, scalar*z }; }
 
     inline T operator *(const Vec3<T> &v) const { return x*v.x + y*v.y + z*v.z; }
 
     inline Vec3<T> operator ^(const Vec3<T> &v) const {
-        return { y*v.z - z*v.y,
-                z*v.x - x*v.z,
-                x*v.y - y*v.x };
+        return { y*v.z - z*v.y, z*v.x - x*v.z, x*v.y - y*v.x };
     }
 
     inline bool operator ==(const Vec2<T> &v) const { return x==v.x && y==v.y && z==v.z; }

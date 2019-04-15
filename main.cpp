@@ -142,10 +142,10 @@ void fillTriangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, TGAColor color)
     for (p.y = lowerBoxMin.y; p.y <= lowerBoxMax.y; p.y++) {
         for (p.x = lowerBoxMin.x; p.x <= lowerBoxMax.x; p.x++) {
             Vec2i ap(p-a);
-            Vec2f bcoord = barycentricCoords(ab, ac, ap);
-            if (bcoord.u >= 0 &&
-                bcoord.v >= 0 &&
-                bcoord.u + bcoord.v <= 1) {
+            Vec2f bCoords = barycentricCoords(ab, ac, ap);
+            if (bCoords.u >= 0 &&
+                bCoords.v >= 0 &&
+                bCoords.u + bCoords.v <= 1) {
                 image.set(p.x, p.y, color);
             }
         }
@@ -153,10 +153,10 @@ void fillTriangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, TGAColor color)
     for (p.y = upperBoxMin.y; p.y <= upperBoxMax.y; p.y++) {
         for (p.x = upperBoxMin.x; p.x <= upperBoxMax.x; p.x++) {
             Vec2i ap(p-a);
-            Vec2f bcoord = barycentricCoords(ab, ac, ap);
-            if (bcoord.u >= 0 &&
-                bcoord.v >= 0 &&
-                bcoord.u + bcoord.v <= 1) {
+            Vec2f bCoords = barycentricCoords(ab, ac, ap);
+            if (bCoords.u >= 0 &&
+                bCoords.v >= 0 &&
+                bCoords.u + bCoords.v <= 1) {
                 image.set(p.x, p.y, color);
             }
         }
