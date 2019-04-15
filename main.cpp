@@ -108,21 +108,20 @@ void drawSquare(Vec2i min, Vec2i max, TGAImage &image, TGAColor color)
 
 void fillTriangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, TGAColor color)
 {
-    Vec2i ab(b-a);
-    Vec2i ac(c-a);
+    Vec2i ab(b - a);
+    Vec2i ac(c - a);
 
     // If the triangle's vertices are collinear, then we don't need to draw
     // anything.
-    if (crossProd(ab, ac).z == 0) {
+    if ((ab ^ ac).z == 0) {
         return;
     }
 
     // Sort the vertices by y coord.
     std::vector<Vec2i> verts{a, b, c};
-    std::sort(verts.begin(), verts.end(),
-              [] (auto a, auto b) {
-                  return a.y < b.y;
-              });
+    std::sort(verts.begin(),
+              verts.end(),
+              [] (auto a, auto b) { return a.y < b.y; });
 
     // Get the bounding boxes for the upper and lower halves of the triangle.
     int totalHeight = verts[2].y - verts[0].y;
@@ -143,7 +142,7 @@ void fillTriangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, TGAColor color)
     for (p.y = lowerBoxMin.y; p.y <= lowerBoxMax.y; p.y++) {
         for (p.x = lowerBoxMin.x; p.x <= lowerBoxMax.x; p.x++) {
             Vec2i ap(p-a);
-            Vec2f bcoord = barycentric(ab, ac, ap);
+            Vec2f bcoord = barycentricCoords(ab, ac, ap);
             if (bcoord.u >= 0 &&
                 bcoord.v >= 0 &&
                 bcoord.u + bcoord.v <= 1) {
@@ -154,7 +153,7 @@ void fillTriangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, TGAColor color)
     for (p.y = upperBoxMin.y; p.y <= upperBoxMax.y; p.y++) {
         for (p.x = upperBoxMin.x; p.x <= upperBoxMax.x; p.x++) {
             Vec2i ap(p-a);
-            Vec2f bcoord = barycentric(ab, ac, ap);
+            Vec2f bcoord = barycentricCoords(ab, ac, ap);
             if (bcoord.u >= 0 &&
                 bcoord.v >= 0 &&
                 bcoord.u + bcoord.v <= 1) {
@@ -184,8 +183,8 @@ void lesson2()
         Vec3f lightVec(0, 0, -1);
         Vec3f ab(worldCoords[1] - worldCoords[0]);
         Vec3f ac(worldCoords[2] - worldCoords[0]);
-        Vec3f faceNormal = normalize(crossProd(ac, ab));
-        float intensity = dotProd(faceNormal, lightVec) * 255.0;
+        Vec3f faceNormal = (ac ^ ab).normalized();
+        float intensity = (faceNormal * lightVec) * 255.0;
         if (intensity > 0) { // Cull backfaces
             TGAColor faceIllum = TGAColor(intensity, intensity, intensity, 255);
             fillTriangle(screenCoords[0], screenCoords[1], screenCoords[2],

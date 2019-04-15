@@ -3,7 +3,10 @@
 
 #include <cmath>
 
-template <class T>
+template <typename T> struct Vec2;
+template <typename T> struct Vec3;
+
+template <typename T>
 struct Vec2
 {
     union {
@@ -11,15 +14,36 @@ struct Vec2
         struct { T u, v; };
         T raw[2];
     };
+
     Vec2() : x(0), y(0) { }
     Vec2(T _x, T _y) : x(_x), y(_y) { }
-    inline Vec2<T> operator +(const Vec2<T> &v) const { return Vec2<T>(x+v.x, y+v.y); }
-    inline Vec2<T> operator -(const Vec2<T> &v) const { return Vec2<T>(x-v.x, y-v.y); }
-    inline Vec2<T> operator *(T scalar) const { return Vec2<T>(scalar*x, scalar*y); }
+
+    inline Vec2<T> operator +(const Vec2<T> &v) const { return { x+v.x, y+v.y }; }
+
+    inline Vec2<T> operator -(const Vec2<T> &v) const { return { x-v.x, y-v.y }; }
+
+    inline Vec2<int> operator *(int scalar) const { return { scalar*x, scalar*y }; }
+
+    inline Vec2<float> operator *(float scalar) const { return { scalar*x, scalar*y }; }
+
+    inline T operator *(const Vec2<T> &v) const { return x*v.x + y*v.y; }
+
+    inline Vec3<T> operator ^(const Vec2<T> &v) const {
+        return { y - v.y,
+                v.x - x,
+                x*v.y - y*v.x };
+    }
+
     inline bool operator ==(const Vec2<T> &v) const { return x==v.x && y==v.y; }
+
+    inline float magnitude() const { return std::sqrt(x*x + y*y); }
+
+    inline Vec2<T> perpendicular() const { return { -y, x }; }
+
+    inline Vec2<float> normalized() const { return (*this) * float(1.0 / magnitude()); }
 };
 
-template <class T>
+template <typename T>
 struct Vec3
 {
     union {
@@ -27,77 +51,45 @@ struct Vec3
         struct { T u, v, w; };
         T raw[3];
     };
+
     Vec3() : x(0), y(0), z(0) { }
     Vec3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) { }
-    inline Vec3<T> operator +(const Vec3<T> &v) const { return Vec3<T>(x+v.x, y+v.y, z+v.z); }
-    inline Vec3<T> operator -(const Vec3<T> &v) const { return Vec3<T>(x-v.x, y-v.y, z-v.z); }
-    inline Vec3<T> operator *(T scalar) const { return Vec3<T>(scalar*x, scalar*y, scalar*z); }
+
+    inline Vec3<T> operator +(const Vec3<T> &v) const { return { x+v.x, y+v.y, z+v.z }; }
+
+    inline Vec3<T> operator -(const Vec3<T> &v) const { return { x-v.x, y-v.y, z-v.z }; }
+
+    inline Vec3<int> operator *(int scalar) const { return { scalar*x, scalar*y, scalar*z }; }
+
+    inline Vec3<float> operator *(float scalar) const { return { scalar*x, scalar*y, scalar*z }; }
+
+    inline T operator *(const Vec3<T> &v) const { return x*v.x + y*v.y + z*v.z; }
+
+    inline Vec3<T> operator ^(const Vec3<T> &v) const {
+        return { y*v.z - z*v.y,
+                z*v.x - x*v.z,
+                x*v.y - y*v.x };
+    }
+
     inline bool operator ==(const Vec2<T> &v) const { return x==v.x && y==v.y && z==v.z; }
+
+    inline float magnitude() const { return std::sqrt(x*x + y*y + z*z); }
+
+    inline Vec3<float> normalized() const { return (*this) * float(1.0 / magnitude()); }
 };
 
-template <class T>
-float mag(const Vec2<T> &a)
-{
-    return std::sqrt(a.x*a.x + a.y*a.y);
-}
 
-template <class T>
-float mag(const Vec3<T> &a)
+template <typename T>
+Vec2<float> barycentricCoords(Vec2<T> ab, Vec2<T> ac, Vec2<T> ap)
 {
-    return std::sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
-}
-
-template <class T>
-Vec2<T> perp(const Vec2<T> &a)
-{
-    return Vec2<T>(-a.y, a.x);
-}
-
-template <class T>
-T dotProd(Vec2<T> a, Vec2<T> b)
-{
-    return a.x*b.x + a.y*b.y;
-}
-
-template <class T>
-T dotProd(Vec3<T> a, Vec3<T> b)
-{
-    return a.x*b.x + a.y*b.y + a.z*b.z;
-}
-
-template <class T>
-Vec3<T> crossProd(Vec2<T> a, Vec2<T> b)
-{
-    return Vec3<T>(a.y - b.y,
-                   b.x - a.x,
-                   a.x*b.y - a.y*b.x);
-}
-
-template <class T>
-Vec3<T> crossProd(Vec3<T> a, Vec3<T> b)
-{
-    return Vec3<T>(a.y*b.z - a.z*b.y,
-                   a.z*b.x - a.x*b.z,
-                   a.x*b.y - a.y*b.x);
-}
-
-template <class T>
-Vec3<float> normalize(Vec3<T> a)
-{
-    return a * (1 / mag(a));
-}
-
-template <class T>
-Vec2<float> barycentric(Vec2<T> ab, Vec2<T> ac, Vec2<T> ap)
-{
-    auto dotABAC = dotProd(ab,ac);
-    auto dotABAB = dotProd(ab,ab);
-    auto dotACAC = dotProd(ac,ac);
-    auto dotAPAB = dotProd(ap,ab);
-    auto dotAPAC = dotProd(ap,ac);
+    auto dotABAC = ab * ac;
+    auto dotABAB = ab * ab;
+    auto dotACAC = ac * ac;
+    auto dotAPAB = ap * ab;
+    auto dotAPAC = ap * ac;
     float invDenom = 1.0 / (dotACAC*dotABAB - dotABAC*dotABAC);
-    float u = ((dotACAC * dotAPAB) - (dotABAC * dotAPAC)) * invDenom;
-    float v = ((dotABAB * dotAPAC) - (dotABAC * dotAPAB)) * invDenom;
+    float u = (dotACAC*dotAPAB - dotABAC*dotAPAC) * invDenom;
+    float v = (dotABAB*dotAPAC - dotABAC*dotAPAB) * invDenom;
 
     return Vec2<float>(u,v);
 }
