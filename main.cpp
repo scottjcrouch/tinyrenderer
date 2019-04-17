@@ -144,7 +144,7 @@ void fillTriangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, TGAColor color)
             auto bCoords = barycentricCoords(ab, ac, ap);
             if (bCoords.u >= 0 &&
                 bCoords.v >= 0 &&
-                bCoords.w >= 0.0) {
+                bCoords.w >= 0) {
                 image.set(p.x, p.y, color);
             }
         }

@@ -92,14 +92,26 @@ Vec3f barycentricCoords(Vec2<T> ab, Vec2<T> ac, Vec2<T> ap)
     auto dotAPAB = ap * ab;
     auto dotAPAC = ap * ac;
     auto denom = dotACAC*dotABAB - dotABAC*dotABAC;
+    // This will cause a divide-by-zero error if the triangle is degenerate
+    // (i.e. if its vertices are collinear, meaning it has zero area).
     float inverseDenom = 1.0f / denom;
     auto uNumer = dotABAB*dotAPAC - dotABAC*dotAPAB;
     float u = uNumer * inverseDenom;
     auto vNumer = dotACAC*dotAPAB - dotABAC*dotAPAC;
     float v = vNumer * inverseDenom;
-    float w = float(denom - uNumer - vNumer);
-
+    float w = denom - uNumer - vNumer;
     return Vec3f(u,v,w);
+
+    /* This is mathematically equivalent to: */
+
+    /* Vec2<T> pa = -ap; */
+    /* auto cross = Vec3f(ab.x, ac.x, pa.x) ^ Vec3f(ab.y, ac.y, pa.y); */
+    /* if (std::abs(cross.z) < 1) { */
+    /*     return Vec3f(-1,-1,-1); */
+    /* } */
+    /* return Vec3f(cross.u / cross.w, */
+    /*              cross.v / cross.w, */
+    /*              1.0 - (cross.u + cross.v) / cross.w); */
 }
 
 #endif // __GEOMETRY_H__
