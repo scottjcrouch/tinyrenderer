@@ -22,6 +22,8 @@ struct Vec2
 
     inline Vec2<T> operator -(const Vec2<T> &v) const { return { x-v.x, y-v.y }; }
 
+    inline Vec2<T> operator -() const { return { -x, -y }; }
+
     inline Vec2<T> operator *(int scalar) const { return { scalar*x, scalar*y }; }
 
     inline Vec2<float> operator *(float scalar) const { return { scalar*x, scalar*y }; }
@@ -57,6 +59,8 @@ struct Vec3
 
     inline Vec3<T> operator -(const Vec3<T> &v) const { return { x-v.x, y-v.y, z-v.z }; }
 
+    inline Vec3<T> operator -() const { return { -x, -y, -z }; }
+
     inline Vec3<T> operator *(int scalar) const { return { scalar*x, scalar*y, scalar*z }; }
 
     inline Vec3<float> operator *(float scalar) const { return { scalar*x, scalar*y, scalar*z }; }
@@ -74,25 +78,28 @@ struct Vec3
     inline Vec3<float> normalized() const { return (*this) * float(1.0 / magnitude()); }
 };
 
+using Vec2f = Vec2<float>;
+using Vec2i = Vec2<int>;
+using Vec3f = Vec3<float>;
+using Vec3i = Vec3<int>;
 
 template <typename T>
-Vec2<float> barycentricCoords(Vec2<T> ab, Vec2<T> ac, Vec2<T> ap)
+Vec3f barycentricCoords(Vec2<T> ab, Vec2<T> ac, Vec2<T> ap)
 {
     auto dotABAC = ab * ac;
     auto dotABAB = ab * ab;
     auto dotACAC = ac * ac;
     auto dotAPAB = ap * ab;
     auto dotAPAC = ap * ac;
-    float invDenom = 1.0 / (dotACAC*dotABAB - dotABAC*dotABAC);
-    float u = (dotACAC*dotAPAB - dotABAC*dotAPAC) * invDenom;
-    float v = (dotABAB*dotAPAC - dotABAC*dotAPAB) * invDenom;
+    auto denom = dotACAC*dotABAB - dotABAC*dotABAC;
+    float inverseDenom = 1.0f / denom;
+    auto uNumer = dotABAB*dotAPAC - dotABAC*dotAPAB;
+    float u = uNumer * inverseDenom;
+    auto vNumer = dotACAC*dotAPAB - dotABAC*dotAPAC;
+    float v = vNumer * inverseDenom;
+    float w = float(denom - uNumer - vNumer);
 
-    return Vec2<float>(u,v);
+    return Vec3f(u,v,w);
 }
-
-using Vec2f = Vec2<float>;
-using Vec2i = Vec2<int>;
-using Vec3f = Vec3<float>;
-using Vec3i = Vec3<int>;
 
 #endif // __GEOMETRY_H__
