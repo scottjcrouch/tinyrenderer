@@ -111,32 +111,31 @@ void fillTriangle(Vec2i a, Vec2i b, Vec2i c, TGAImage &image, TGAColor color)
     Vec2i ab(b - a);
     Vec2i ac(c - a);
 
-    // If the triangle's vertices are collinear, then we don't need to draw
-    // anything.
+    // If the triangle's vertices are collinear, then don't draw anything.
     if ((ab ^ ac).z == 0) {
         return;
     }
 
     // Sort the vertices by y coord.
-    std::vector<Vec2i> verts{a, b, c};
-    std::sort(verts.begin(),
-              verts.end(),
+    std::vector<Vec2i> ySorted{a, b, c};
+    std::sort(ySorted.begin(),
+              ySorted.end(),
               [] (auto a, auto b) { return a.y < b.y; });
 
     // Get the bounding boxes for the upper and lower halves of the triangle.
-    int totalHeight = verts[2].y - verts[0].y;
-    float t = ((float)(verts[1].y - verts[0].y) / totalHeight);
-    int widthBetween0and2 = verts[2].x - verts[0].x;
+    int totalHeight = ySorted[2].y - ySorted[0].y;
+    float t = ((float)(ySorted[1].y - ySorted[0].y) / totalHeight);
+    int widthBetween0and2 = ySorted[2].x - ySorted[0].x;
     bool signBit = widthBetween0and2 < 0;
-    int xLerp = verts[0].x + (int)(t * widthBetween0and2 + (signBit ? -1 : 1));
-    Vec2i lowerBoxMin(std::min({ verts[0].x, verts[1].x, xLerp }),
-                      verts[0].y);
-    Vec2i lowerBoxMax(std::max({ verts[0].x, verts[1].x, xLerp }),
-                      verts[1].y);
-    Vec2i upperBoxMin(std::min({ verts[1].x, verts[2].x, xLerp }),
-                      verts[1].y + 1);
-    Vec2i upperBoxMax(std::max({ verts[1].x, verts[2].x, xLerp }),
-                      verts[2].y);
+    int xLerp = ySorted[0].x + (int)(t * widthBetween0and2 + (signBit ? -1 : 1));
+    Vec2i lowerBoxMin(std::min({ ySorted[0].x, ySorted[1].x, xLerp }),
+                      ySorted[0].y);
+    Vec2i lowerBoxMax(std::max({ ySorted[0].x, ySorted[1].x, xLerp }),
+                      ySorted[1].y);
+    Vec2i upperBoxMin(std::min({ ySorted[1].x, ySorted[2].x, xLerp }),
+                      std::min(ySorted[1].y + 1, ySorted[2].y));
+    Vec2i upperBoxMax(std::max({ ySorted[1].x, ySorted[2].x, xLerp }),
+                      ySorted[2].y);
 
     Vec2i p;
     for (p.y = lowerBoxMin.y; p.y <= lowerBoxMax.y; p.y++) {
