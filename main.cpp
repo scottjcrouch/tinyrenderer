@@ -2,6 +2,7 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
+#include <cassert>
 
 #include "tgaimage.h"
 #include "model.h"
@@ -196,10 +197,113 @@ void lesson2()
     image.write_tga_file("output.tga");
 }
 
+void fill3DTriangle(Vec3f a, Vec3f b, Vec3f c,
+                    std::vector<float> &zBuffer, TGAImage &image, TGAColor color)
+{
+    Vec3f ab(b - a);
+    Vec3f ac(c - a);
+
+    // If the triangle's vertices are collinear, then don't draw anything.
+    if ((ab ^ ac).z == 0.0f) {
+        return;
+    }
+
+    // Sort the vertices by y coord.
+    std::vector<Vec3f> ySorted{ a, b, c };
+    std::sort(ySorted.begin(), ySorted.end(),
+              [] (auto a, auto b) { return a.y < b.y; });
+
+    // Get the bounding boxes for the upper and lower halves of the triangle.
+    float totalHeight = ySorted[2].y - ySorted[0].y;
+    float t = (ySorted[1].y - ySorted[0].y) / totalHeight;
+    float widthBetween0and2 = ySorted[2].x - ySorted[0].x;
+    float xLerp = ySorted[0].x + (t * widthBetween0and2);
+    Vec2i lowerBoxMin(int(std::min({ ySorted[0].x, ySorted[1].x, xLerp })),
+                      int(ySorted[0].y));
+    Vec2i lowerBoxMax(int(std::max({ ySorted[0].x, ySorted[1].x, xLerp })),
+                      int(ySorted[1].y));
+    Vec2i upperBoxMin(int(std::min({ ySorted[1].x, ySorted[2].x, xLerp })),
+                      int(ySorted[1].y) + 1);
+    Vec2i upperBoxMax(int(std::max({ ySorted[1].x, ySorted[2].x, xLerp })),
+                      int(ySorted[2].y));
+
+    Vec3f p;
+    for (p.y = lowerBoxMin.y; p.y <= lowerBoxMax.y; p.y++) {
+        for (p.x = lowerBoxMin.x; p.x <= lowerBoxMax.x; p.x++) {
+            Vec3f ap(p - a);
+            Vec3f bCoords = barycentricCoords(ab, ac, ap);
+            if (bCoords.u < 0 ||
+                bCoords.v < 0 ||
+                bCoords.w < 0) {
+                continue;
+            }
+            p.z = a.z*bCoords.w + b.z*bCoords.u + c.z*bCoords.v;
+            if (zBuffer[int(p.y*image.get_width() + p.x)] >= p.z) {
+                continue;
+            }
+            zBuffer[int(p.y*image.get_width() + p.x)] = p.z;
+            image.set(p.x, p.y, color);
+        }
+    }
+    for (p.y = upperBoxMin.y; p.y <= upperBoxMax.y; p.y++) {
+        for (p.x = upperBoxMin.x; p.x <= upperBoxMax.x; p.x++) {
+            Vec3f ap(p - a);
+            Vec3f bCoords = barycentricCoords(ab, ac, ap);
+            if (bCoords.u < 0 ||
+                bCoords.v < 0 ||
+                bCoords.w < 0) {
+                continue;
+            }
+            p.z = a.z*bCoords.w + b.z*bCoords.u + c.z*bCoords.v;
+            if (zBuffer[int(p.y*image.get_width() + p.x)] >= p.z) {
+                continue;
+            }
+            zBuffer[int(p.y*image.get_width() + p.x)] = p.z;
+            image.set(p.x, p.y, color);
+        }
+    }
+}
+
+void lesson3()
+{
+    constexpr int width  = 800;
+    constexpr int height = 800;
+    TGAImage image(width, height, TGAImage::RGB);
+    std::vector<float> zBuffer(width * height, std::numeric_limits<float>::lowest());
+
+    for (int i = 0; i < model->numFaces(); i++) {
+        std::vector<int> face = model->face(i);
+        Vec3f worldCoords[3];
+        Vec3f screenCoords[3];
+        for (int j = 0; j < 3; j++) {
+            worldCoords[j] = model->vert(face[j]);
+            screenCoords[j] =
+                Vec3f((worldCoords[j].x + 1.0) * width / 2.0,
+                      (worldCoords[j].y + 1.0) * height / 2.0,
+                      worldCoords[j].z);
+        }
+
+        Vec3f lightVec(0, 0, -1);
+        Vec3f ab(worldCoords[1] - worldCoords[0]);
+        Vec3f ac(worldCoords[2] - worldCoords[0]);
+        Vec3f faceNormal = (ac ^ ab).normalized();
+        float intensity = (faceNormal * lightVec) * 255.0;
+        if (intensity > 0) { // Cull backfaces
+            TGAColor faceIllum = TGAColor(intensity, intensity, intensity, 255);
+            fill3DTriangle(screenCoords[0], screenCoords[1], screenCoords[2],
+                           zBuffer, image, faceIllum);
+        }
+    }
+
+    image.flip_vertically();
+    image.write_tga_file("output.tga");
+}
+
 int main(int argc, char** argv)
 {
     // lesson0();
     // lesson1();
-    lesson2();
+    // lesson2();
+    lesson3();
     return 0;
 }

@@ -2,6 +2,7 @@
 #define __GEOMETRY_H__
 
 #include <cmath>
+#include <cassert>
 
 template <typename T> struct Vec2;
 template <typename T> struct Vec3;
@@ -84,34 +85,16 @@ using Vec3f = Vec3<float>;
 using Vec3i = Vec3<int>;
 
 template <typename T>
-Vec3f barycentricCoords(Vec2<T> ab, Vec2<T> ac, Vec2<T> ap)
+Vec3f barycentricCoords(T ab, T ac, T ap)
 {
-    auto dotABAC = ab * ac;
-    auto dotABAB = ab * ab;
-    auto dotACAC = ac * ac;
-    auto dotAPAB = ap * ab;
-    auto dotAPAC = ap * ac;
-    auto denom = dotACAC*dotABAB - dotABAC*dotABAC;
-    // This will cause a divide-by-zero error if the triangle is degenerate
-    // (i.e. if its vertices are collinear, meaning it has zero area).
-    float inverseDenom = 1.0f / denom;
-    auto uNumer = dotABAB*dotAPAC - dotABAC*dotAPAB;
-    float u = uNumer * inverseDenom;
-    auto vNumer = dotACAC*dotAPAB - dotABAC*dotAPAC;
-    float v = vNumer * inverseDenom;
-    float w = denom - uNumer - vNumer;
-    return Vec3f(u,v,w);
-
-    /* This is mathematically equivalent to: */
-
-    /* Vec2<T> pa = -ap; */
-    /* auto cross = Vec3f(ab.x, ac.x, pa.x) ^ Vec3f(ab.y, ac.y, pa.y); */
-    /* if (std::abs(cross.z) < 1) { */
-    /*     return Vec3f(-1,-1,-1); */
-    /* } */
-    /* return Vec3f(cross.u / cross.w, */
-    /*              cross.v / cross.w, */
-    /*              1.0 - (cross.u + cross.v) / cross.w); */
+    T pa(-ap);
+    auto cross = Vec3f(ab.x, ac.x, pa.x) ^ Vec3f(ab.y, ac.y, pa.y);
+    if (std::abs(cross.z) == 0.0f) {
+        assert(!"Tried to compute barycentric coordinates of a degenerate triangle!\n");
+    }
+    return Vec3f(cross.x / cross.z,
+                 cross.y / cross.z,
+                 1.0 - (cross.x + cross.y) / cross.z);
 }
 
 #endif // __GEOMETRY_H__
