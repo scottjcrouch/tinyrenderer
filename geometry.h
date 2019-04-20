@@ -19,29 +19,20 @@ struct Vec2
     Vec2() : x(0), y(0) { }
     Vec2(T _x, T _y) : x(_x), y(_y) { }
 
+    inline bool operator ==(const Vec2<T> &v) const { return x==v.x && y==v.y; }
     inline Vec2<T> operator +(const Vec2<T> &v) const { return { x+v.x, y+v.y }; }
-
     inline Vec2<T> operator -(const Vec2<T> &v) const { return { x-v.x, y-v.y }; }
-
     inline Vec2<T> operator -() const { return { -x, -y }; }
-
     inline Vec2<T> operator *(int scalar) const { return { scalar*x, scalar*y }; }
-
     inline Vec2<float> operator *(float scalar) const { return { scalar*x, scalar*y }; }
-
     inline T operator *(const Vec2<T> &v) const { return x*v.x + y*v.y; }
-
     inline Vec3<T> operator ^(const Vec2<T> &v) const {
         return { y - v.y, v.x - x, x*v.y - y*v.x };
     }
 
-    inline bool operator ==(const Vec2<T> &v) const { return x==v.x && y==v.y; }
-
-    inline float magnitude() const { return std::sqrt(x*x + y*y); }
-
-    inline Vec2<T> perpendicular() const { return { -y, x }; }
-
-    inline Vec2<float> normalized() const { return (*this) * float(1.0 / magnitude()); }
+    float magnitude() const { return std::sqrt(x*x + y*y); }
+    Vec2<T> perpendicular() const { return { -y, x }; }
+    Vec2<float> normalized() const { return (*this) * float(1.0 / magnitude()); }
 };
 
 template <typename T>
@@ -56,27 +47,19 @@ struct Vec3
     Vec3() : x(0), y(0), z(0) { }
     Vec3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) { }
 
+    inline bool operator ==(const Vec2<T> &v) const { return x==v.x && y==v.y && z==v.z; }
     inline Vec3<T> operator +(const Vec3<T> &v) const { return { x+v.x, y+v.y, z+v.z }; }
-
     inline Vec3<T> operator -(const Vec3<T> &v) const { return { x-v.x, y-v.y, z-v.z }; }
-
     inline Vec3<T> operator -() const { return { -x, -y, -z }; }
-
     inline Vec3<T> operator *(int scalar) const { return { scalar*x, scalar*y, scalar*z }; }
-
     inline Vec3<float> operator *(float scalar) const { return { scalar*x, scalar*y, scalar*z }; }
-
     inline T operator *(const Vec3<T> &v) const { return x*v.x + y*v.y + z*v.z; }
-
     inline Vec3<T> operator ^(const Vec3<T> &v) const {
         return { y*v.z - z*v.y, z*v.x - x*v.z, x*v.y - y*v.x };
     }
 
-    inline bool operator ==(const Vec2<T> &v) const { return x==v.x && y==v.y && z==v.z; }
-
-    inline float magnitude() const { return std::sqrt(x*x + y*y + z*z); }
-
-    inline Vec3<float> normalized() const { return (*this) * float(1.0 / magnitude()); }
+    float magnitude() const { return std::sqrt(x*x + y*y + z*z); }
+    Vec3<float> normalized() const { return (*this) * float(1.0 / magnitude()); }
 };
 
 using Vec2f = Vec2<float>;
@@ -89,12 +72,10 @@ Vec3f barycentricCoords(T ab, T ac, T ap)
 {
     T pa(-ap);
     auto cross = Vec3f(ab.x, ac.x, pa.x) ^ Vec3f(ab.y, ac.y, pa.y);
-    if (std::abs(cross.z) == 0.0f) {
-        assert(!"Tried to compute barycentric coordinates of a degenerate triangle!\n");
-    }
+    assert(cross.z != 0.0f);
     return Vec3f(cross.x / cross.z,
                  cross.y / cross.z,
-                 1.0 - (cross.x + cross.y) / cross.z);
+                 1.0 - ((cross.x + cross.y) / cross.z));
 }
 
 #endif // __GEOMETRY_H__
