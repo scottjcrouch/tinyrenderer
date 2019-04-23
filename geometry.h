@@ -78,4 +78,31 @@ Vec3f barycentricCoords(T ab, T ac, T ap)
                  1.0 - ((cross.x + cross.y) / cross.z));
 }
 
+template <class T>
+void clamp(T &x, const T &low, const T &high)
+{
+    if (x < low) x = low;
+    if (x > high) x = high;
+}
+
+template <class T>
+void clampVec2(Vec2<T> &v, const Vec2<T> &low, const Vec2<T> &high)
+{
+    if (v.x < low.x) v.x = low.x;
+    if (v.y < low.y) v.y = low.y;
+    if (v.x > high.x) v.x = high.x;
+    if (v.y > high.y) v.y = high.y;
+}
+
+template <class T>
+void clampVec3(Vec3<T> &v, const Vec3<T> &low, const Vec3<T> &high)
+{
+    if (v.x < low.x) v.x = low.x;
+    if (v.y < low.y) v.y = low.y;
+    if (v.z < low.z) v.z = low.z;
+    if (v.x > high.x) v.x = high.x;
+    if (v.y > high.y) v.y = high.y;
+    if (v.z > high.z) v.y = high.z;
+}
+
 #endif // __GEOMETRY_H__
