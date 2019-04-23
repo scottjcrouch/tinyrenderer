@@ -9,15 +9,18 @@ class Model
 {
 public:
     Model(const char *filename);
-    ~Model();
-    int numVerts();
+
     int numFaces();
-    Vec3f vert(int i);
-    std::vector<int> face(int idx);
+    std::vector<int> getFace(int index);
+    Vec3f getVertex(int index);
+    Vec2f getTextureVertex(int index);
+    Vec3f getVertexNormal(int index);
 
 private:
-    std::vector<Vec3f> verts;
+    std::vector<Vec3f> vertices;
     std::vector<std::vector<int>> faces;
+    std::vector<Vec2f> textureVertices;
+    std::vector<Vec3f> vertexNormals;
 };
 
 #endif // __MODEL_H__

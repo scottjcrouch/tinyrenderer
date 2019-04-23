@@ -129,20 +129,24 @@ void lesson3()
     std::vector<float> zBuffer(width * height, std::numeric_limits<float>::lowest());
 
     for (int i = 0; i < model->numFaces(); i++) {
-        std::vector<int> face = model->face(i);
-        Vec3f worldCoords[3];
+        std::vector<int> face = model->getFace(i);
+        Vec3f faceVertices[3];
+        Vec3f textureVertices[3];
+        Vec3f vertexNormals[3];
         Vec3f screenCoords[3];
         for (int j = 0; j < 3; j++) {
-            worldCoords[j] = model->vert(face[j]);
+            faceVertices[j] = model->getVertex(face[j*3]);
+            textureVertices[j] = model->getVertex(face[j*3 + 1]);
+            vertexNormals[j] = model->getVertex(face[j*3 + 2]);
             screenCoords[j] =
-                Vec3f((worldCoords[j].x + 1.0) * width / 2.0,
-                      (worldCoords[j].y + 1.0) * height / 2.0,
-                      worldCoords[j].z);
+                Vec3f((faceVertices[j].x + 1.0) * width / 2.0,
+                      (faceVertices[j].y + 1.0) * height / 2.0,
+                      faceVertices[j].z);
         }
 
         Vec3f lightVec(0, 0, -1);
-        Vec3f ab(worldCoords[1] - worldCoords[0]);
-        Vec3f ac(worldCoords[2] - worldCoords[0]);
+        Vec3f ab(faceVertices[1] - faceVertices[0]);
+        Vec3f ac(faceVertices[2] - faceVertices[0]);
         Vec3f faceNormal = (ac ^ ab).normalized();
         float intensity = (faceNormal * lightVec) * 255.0;
         if (intensity > 0) { // Cull backfaces
