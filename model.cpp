@@ -39,9 +39,9 @@ Model::Model(const char *filename) : vertices(), faces()
             }
             faces.push_back(std::move(face));
         } else if (!line.compare(0, 3, "vt ")) {
-            float u, v;
-            iss >> dummy_char >> dummy_char >> u >> v;
-            textureVertices.emplace_back(u, v);
+            float u, v, w;
+            iss >> dummy_char >> dummy_char >> u >> v >> w;
+            textureVertices.emplace_back(u, v, w);
         } else if (!line.compare(0, 3, "vn ")) {
             float i, j, k;
             iss >> dummy_char >> dummy_char >> i >> j >> k;
@@ -56,6 +56,6 @@ std::vector<int> Model::getFace(int index) { return faces[index]; }
 
 Vec3f Model::getVertex(int index) { return vertices[index]; }
 
-Vec2f Model::getTextureVertex(int index) { return textureVertices[index]; }
+Vec3f Model::getTextureVertex(int index) { return textureVertices[index]; }
 
 Vec3f Model::getVertexNormal(int index) { return vertexNormals[index]; }

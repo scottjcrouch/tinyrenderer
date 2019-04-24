@@ -79,7 +79,9 @@ void drawSquare(const Vec2i &min, const Vec2i &max,
 }
 
 void fillTriangle(const Vec3f &a, const Vec3f &b, const Vec3f &c,
-                  std::vector<float> &zBuffer, TGAImage &image, TGAColor color)
+                  const Vec3f &ta, const Vec3f &tb, const Vec3f &tc,
+                  std::vector<float> &zBuffer, TGAImage &image, float intensity,
+                  TGAImage &texture)
 {
     Vec3f ab(b - a);
     Vec3f ac(c - a);
@@ -116,6 +118,11 @@ void fillTriangle(const Vec3f &a, const Vec3f &b, const Vec3f &c,
                 continue;
             }
             zBuffer[int(p.y*width + p.x)] = p.z;
+            Vec3f t = ta*bCoords.w + tb*bCoords.u + tc*bCoords.v;
+            TGAColor color = texture.get(int(t.x), int(t.y));
+            color.r *= intensity;
+            color.g *= intensity;
+            color.b *= intensity;
             image.set(p.x, p.y, color);
         }
     }
@@ -126,6 +133,9 @@ void lesson3()
     constexpr int width  = 800;
     constexpr int height = 800;
     TGAImage image(width, height, TGAImage::RGB);
+    TGAImage texture;
+    texture.read_tga_file("obj/african_head_diffuse.tga");
+    texture.flip_vertically();
     std::vector<float> zBuffer(width * height, std::numeric_limits<float>::lowest());
 
     for (int i = 0; i < model->numFaces(); i++) {
@@ -133,26 +143,34 @@ void lesson3()
         Vec3f faceVertices[3];
         Vec3f textureVertices[3];
         Vec3f vertexNormals[3];
+
         Vec3f screenCoords[3];
+        Vec3f textureCoords[3];
+
         for (int j = 0; j < 3; j++) {
             faceVertices[j] = model->getVertex(face[j*3]);
-            textureVertices[j] = model->getVertex(face[j*3 + 1]);
-            vertexNormals[j] = model->getVertex(face[j*3 + 2]);
+            textureVertices[j] = model->getTextureVertex(face[j*3 + 1]);
+            vertexNormals[j] = model->getVertexNormal(face[j*3 + 2]);
+
             screenCoords[j] =
                 Vec3f((faceVertices[j].x + 1.0) * width / 2.0,
                       (faceVertices[j].y + 1.0) * height / 2.0,
                       faceVertices[j].z);
+            textureCoords[j] =
+                Vec3f(textureVertices[j].x * texture.get_width(),
+                      textureVertices[j].y * texture.get_height(),
+                      textureVertices[j].z);
         }
 
         Vec3f lightVec(0, 0, -1);
         Vec3f ab(faceVertices[1] - faceVertices[0]);
         Vec3f ac(faceVertices[2] - faceVertices[0]);
         Vec3f faceNormal = (ac ^ ab).normalized();
-        float intensity = (faceNormal * lightVec) * 255.0;
+        float intensity = faceNormal * lightVec;
         if (intensity > 0) { // Cull backfaces
-            TGAColor faceIllum = TGAColor(intensity, intensity, intensity, 255);
             fillTriangle(screenCoords[0], screenCoords[1], screenCoords[2],
-                         zBuffer, image, faceIllum);
+                         textureCoords[0], textureCoords[1], textureCoords[2],
+                         zBuffer, image, intensity, texture);
         }
     }
 

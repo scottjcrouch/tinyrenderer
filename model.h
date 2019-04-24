@@ -13,13 +13,13 @@ public:
     int numFaces();
     std::vector<int> getFace(int index);
     Vec3f getVertex(int index);
-    Vec2f getTextureVertex(int index);
+    Vec3f getTextureVertex(int index);
     Vec3f getVertexNormal(int index);
 
 private:
     std::vector<Vec3f> vertices;
     std::vector<std::vector<int>> faces;
-    std::vector<Vec2f> textureVertices;
+    std::vector<Vec3f> textureVertices;
     std::vector<Vec3f> vertexNormals;
 };
 
