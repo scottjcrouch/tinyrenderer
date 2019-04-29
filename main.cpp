@@ -128,7 +128,7 @@ void fillTriangle(const Vec3f &a, const Vec3f &b, const Vec3f &c,
     }
 }
 
-void lesson3()
+void lesson4()
 {
     constexpr int width  = 800;
     constexpr int height = 800;
@@ -137,6 +137,7 @@ void lesson3()
     texture.read_tga_file("obj/african_head_diffuse.tga");
     texture.flip_vertically();
     std::vector<float> zBuffer(width * height, std::numeric_limits<float>::lowest());
+    Vec3f camera(0, 0, 3);
 
     for (int i = 0; i < model->numFaces(); i++) {
         std::vector<int> face = model->getFace(i);
@@ -152,6 +153,7 @@ void lesson3()
             textureVertices[j] = model->getTextureVertex(face[j*3 + 1]);
             vertexNormals[j] = model->getVertexNormal(face[j*3 + 2]);
 
+            faceVertices[j] = faceVertices[j] * (1/(1 - (faceVertices[j].z/camera.z)));
             screenCoords[j] =
                 Vec3f((faceVertices[j].x + 1.0) * width / 2.0,
                       (faceVertices[j].y + 1.0) * height / 2.0,
@@ -180,6 +182,6 @@ void lesson3()
 
 int main(int argc, char** argv)
 {
-    lesson3();
+    lesson4();
     return 0;
 }
