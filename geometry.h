@@ -88,21 +88,16 @@ void clamp(T &x, const T &low, const T &high)
 template <class T>
 void clampVec2(Vec2<T> &v, const Vec2<T> &low, const Vec2<T> &high)
 {
-    if (v.x < low.x) v.x = low.x;
-    if (v.y < low.y) v.y = low.y;
-    if (v.x > high.x) v.x = high.x;
-    if (v.y > high.y) v.y = high.y;
+    clamp(v.x, low.x, high.x);
+    clamp(v.y, low.y, high.y);
 }
 
 template <class T>
 void clampVec3(Vec3<T> &v, const Vec3<T> &low, const Vec3<T> &high)
 {
-    if (v.x < low.x) v.x = low.x;
-    if (v.y < low.y) v.y = low.y;
-    if (v.z < low.z) v.z = low.z;
-    if (v.x > high.x) v.x = high.x;
-    if (v.y > high.y) v.y = high.y;
-    if (v.z > high.z) v.y = high.z;
+    clamp(v.x, low.x, high.x);
+    clamp(v.y, low.y, high.y);
+    clamp(v.z, low.z, high.z);
 }
 
 #endif // __GEOMETRY_H__
