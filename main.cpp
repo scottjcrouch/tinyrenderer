@@ -95,17 +95,17 @@ void fillTriangle(const Vec3f &a, const Vec3f &b, const Vec3f &c,
     int width = image.get_width();
     int height = image.get_height();
     Vec2i imageMin = { 0, 0 };
-    Vec2i imageMax = { width - 1, height - 1 };
+    Vec2i imageMax = { width, height };
     Vec2i lowBound(int(std::min({ a.x, b.x, c.x })),
                    int(std::min({ a.y, b.y, c.y })));
-    Vec2i highBound(int(std::max({ a.x, b.x, c.x })),
-                    int(std::max({ a.y, b.y, c.y })));
+    Vec2i highBound(int(std::ceil(std::max({ a.x, b.x, c.x }))),
+                    int(std::ceil(std::max({ a.y, b.y, c.y }))));
     clampVec2(lowBound, imageMin, imageMax);
-    clampVec2(lowBound, imageMin, imageMax);
+    clampVec2(highBound, imageMin, imageMax);
 
     Vec3f p;
-    for (p.y = lowBound.y; p.y <= highBound.y; p.y++) {
-        for (p.x = lowBound.x; p.x <= highBound.x; p.x++) {
+    for (p.y = lowBound.y; p.y < highBound.y; p.y++) {
+        for (p.x = lowBound.x; p.x < highBound.x; p.x++) {
             Vec3f ap(p - a);
             Vec3f bCoords = barycentricCoords(ab, ac, ap);
             if (bCoords.u < 0 ||
