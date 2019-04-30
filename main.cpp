@@ -84,7 +84,7 @@ void fillTriangle(const Vec3f &a, const Vec3f &b, const Vec3f &c,
     Vec3f ab(b - a);
     Vec3f ac(c - a);
 
-    if ((ab ^ ac).z != 0.0f) {
+    if ((ab ^ ac).z == 0.0f) {
         // Degenerate triangle.
         return;
     }
@@ -165,7 +165,7 @@ void lesson4()
         /* Lighting and backface culling. */
         Vec3f ab(faceVertices[1] - faceVertices[0]);
         Vec3f ac(faceVertices[2] - faceVertices[0]);
-        if ((ab ^ ac).z != 0.0f) {
+        if ((ab ^ ac).z == 0.0f) {
             // Degenerate triangle.
             return;
         }
