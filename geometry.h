@@ -100,4 +100,23 @@ void clampVec3(Vec3<T> &v, const Vec3<T> &low, const Vec3<T> &high)
     clamp(v.z, low.z, high.z);
 }
 
+struct Matrix
+{
+    std::array<std::array<float, 4>, 4> m;
+
+    Matrix() : m{{{1,0,0,0},
+                  {0,1,0,0},
+                  {0,0,1,0},
+                  {0,0,0,1}}} { }
+
+    inline std::array<float, 4>& operator [] (const int row) { return m[row]; }
+
+    inline Vec3f operator *(const Vec3f &v) const {
+        Vec3f result = { v.x*m[0][0] + v.y*m[0][1] + v.z*m[0][2] + m[0][3],
+                         v.x*m[1][0] + v.y*m[1][1] + v.z*m[1][2] + m[1][3],
+                         v.x*m[2][0] + v.y*m[2][1] + v.z*m[2][2] + m[2][3] };
+        return result * (1.0f / (v.x*m[3][0] + v.y*m[3][1] + v.z*m[3][2] + m[3][3]));
+    }
+};
+
 #endif // __GEOMETRY_H__

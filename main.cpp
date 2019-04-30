@@ -116,8 +116,8 @@ void fillTriangle(const Vec3f &a, const Vec3f &b, const Vec3f &c,
                 continue;
             }
             zBuffer[int(p.y*width + p.x)] = p.z;
-            Vec3f t = ta*bCoords.w + tb*bCoords.u + tc*bCoords.v;
-            TGAColor color = texture.get(int(t.x), int(t.y));
+            Vec3f texel = ta*bCoords.w + tb*bCoords.u + tc*bCoords.v;
+            TGAColor color = texture.get(int(texel.x), int(texel.y));
             color.r *= intensity;
             color.g *= intensity;
             color.b *= intensity;
@@ -132,10 +132,24 @@ void lesson4()
     TGAImage texture;
     texture.read_tga_file("obj/african_head_diffuse.tga");
     texture.flip_vertically();
-    TGAImage image(800, 800, TGAImage::RGB);
+    constexpr int width = 800, height = 800, depth = 255;
+    TGAImage image(width, height, TGAImage::RGB);
     std::vector<float> zBuffer(image.get_width() * image.get_height(),
                                std::numeric_limits<float>::lowest());
-    Vec3f cameraPos(0, 0, 3);
+
+    Vec3f cameraPos(0, 0, 1.5);
+
+    Matrix projection;
+    projection[3][2] = -1.0f / cameraPos.z;
+    Matrix translate;
+    translate[0][3] = 1.0f;
+    translate[1][3] = 1.0f;
+    translate[2][3] = 1.0f;
+    Matrix stretch;
+    stretch[0][0] = width / 2.0f;
+    stretch[1][1] = height / 2.0f;
+    stretch[2][2] = depth / 2.0f;
+
     Vec3f lightVec(0, 0, -1);
 
     for (int i = 0; i < model.numFaces(); i++) {
@@ -151,15 +165,12 @@ void lesson4()
             textureVertices[j] = model.getTextureVertex(face[j*3 + 1]);
             vertexNormals[j] = model.getVertexNormal(face[j*3 + 2]);
 
-            faceVertices[j] = faceVertices[j] * (1/(1 - (faceVertices[j].z/cameraPos.z)));
-            screenCoords[j] =
-                Vec3f((faceVertices[j].x + 1.0) * image.get_width() / 2.0,
-                      (faceVertices[j].y + 1.0) * image.get_height() / 2.0,
-                      faceVertices[j].z);
-            textureCoords[j] =
-                Vec3f(textureVertices[j].x * texture.get_width(),
-                      textureVertices[j].y * texture.get_height(),
-                      textureVertices[j].z);
+            faceVertices[j] = projection * faceVertices[j];
+            screenCoords[j] = stretch * (translate * faceVertices[j]);
+
+            textureCoords[j] = { textureVertices[j].x * texture.get_width(),
+                                 textureVertices[j].y * texture.get_height(),
+                                 textureVertices[j].z };
         }
 
         /* Lighting and backface culling. */
