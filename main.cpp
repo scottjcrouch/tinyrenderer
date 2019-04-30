@@ -76,12 +76,17 @@ void drawSquare(const Vec2i &min, const Vec2i &max,
     drawLine(max, {max.x, min.y}, image, color);
 }
 
-void fillTriangle(const Vec3f &a, const Vec3f &b, const Vec3f &c,
-                  const Vec3f &ta, const Vec3f &tb, const Vec3f &tc,
-                  const float intensitya, const float intensityb, const float intensityc,
-                  std::vector<float> &zBuffer, TGAImage &image,
+void fillTriangle(const std::array<Vec3f, 3> &vertices,
+                  const std::array<Vec3f, 3> &textureVertices,
+                  const std::array<float, 3> &intensities,
+                  std::vector<float> &zBuffer,
+                  TGAImage &image,
                   TGAImage &texture)
 {
+    const Vec3f &a = vertices[0];
+    const Vec3f &b = vertices[1];
+    const Vec3f &c = vertices[2];
+
     Vec3f ab(b - a);
     Vec3f ac(c - a);
 
@@ -104,20 +109,24 @@ void fillTriangle(const Vec3f &a, const Vec3f &b, const Vec3f &c,
     for (p.y = lowBound.y; p.y < highBound.y; p.y++) {
         for (p.x = lowBound.x; p.x < highBound.x; p.x++) {
             Vec3f ap(p - a);
-            Vec3f bCoords = barycentricCoords(ab, ac, ap);
-            if (bCoords.u < 0 ||
-                bCoords.v < 0 ||
-                bCoords.w < 0) {
+            Vec3f bary = barycentricCoords(ab, ac, ap);
+            if (bary.u < 0 ||
+                bary.v < 0 ||
+                bary.w < 0) {
                 continue;
             }
-            p.z = a.z*bCoords.w + b.z*bCoords.u + c.z*bCoords.v;
+            p.z = a.z*bary.w + b.z*bary.u + c.z*bary.v;
             if (zBuffer[int(p.y*width + p.x)] >= p.z) {
                 continue;
             }
             zBuffer[int(p.y*width + p.x)] = p.z;
-            Vec3f texel = ta*bCoords.w + tb*bCoords.u + tc*bCoords.v;
+            Vec3f texel = textureVertices[0] * bary.w +
+                         textureVertices[1] * bary.u +
+                         textureVertices[2] * bary.v;
             TGAColor color = texture.get(int(texel.x), int(texel.y));
-            float intensity = intensitya*bCoords.w + intensityb*bCoords.u + intensityc*bCoords.v;
+            float intensity = intensities[0] * bary.w +
+                         intensities[1] * bary.u +
+                         intensities[2] * bary.v;
             if (intensity < 0.0f) {
                 image.set(p.x, p.y, black);
             } else {
@@ -158,12 +167,12 @@ void lesson5()
 
     for (int i = 0; i < model.numFaces(); i++) {
         std::vector<int> face = model.getFace(i);
-        Vec3f faceVertices[3];
-        Vec3f textureVertices[3];
-        Vec3f vertexNormals[3];
-        Vec3f screenCoords[3];
-        Vec3f textureCoords[3];
-        float intensities[3];
+        std::array<Vec3f, 3> faceVertices;
+        std::array<Vec3f, 3> textureVertices;
+        std::array<Vec3f, 3> vertexNormals;
+        std::array<Vec3f, 3> screenCoords;
+        std::array<Vec3f, 3> textureCoords;
+        std::array<float, 3> intensities;
 
         for (int j = 0; j < 3; j++) {
             faceVertices[j] = model.getVertex(face[j*3]);
@@ -186,9 +195,7 @@ void lesson5()
             continue;
         }
 
-        fillTriangle(screenCoords[0], screenCoords[1], screenCoords[2],
-                     textureCoords[0], textureCoords[1], textureCoords[2],
-                     intensities[0], intensities[1], intensities[2],
+        fillTriangle(screenCoords, textureCoords, intensities,
                      zBuffer, image, texture);
     }
 
