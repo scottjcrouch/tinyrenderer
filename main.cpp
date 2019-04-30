@@ -78,16 +78,15 @@ void drawSquare(const Vec2i &min, const Vec2i &max,
 
 void fillTriangle(const Vec3f &a, const Vec3f &b, const Vec3f &c,
                   const Vec3f &ta, const Vec3f &tb, const Vec3f &tc,
-                  std::vector<float> &zBuffer, TGAImage &image, float intensity,
+                  const float intensitya, const float intensityb, const float intensityc,
+                  std::vector<float> &zBuffer, TGAImage &image,
                   TGAImage &texture)
 {
     Vec3f ab(b - a);
     Vec3f ac(c - a);
 
-    if ((ab ^ ac).z == 0.0f) {
-        // Degenerate triangle.
-        return;
-    }
+    // Ensure triangle is not degenerate.
+    assert((ab ^ ac).z != 0.0f);
 
     // Get the on-screen bounding box for the triangle.
     int width = image.get_width();
@@ -118,15 +117,20 @@ void fillTriangle(const Vec3f &a, const Vec3f &b, const Vec3f &c,
             zBuffer[int(p.y*width + p.x)] = p.z;
             Vec3f texel = ta*bCoords.w + tb*bCoords.u + tc*bCoords.v;
             TGAColor color = texture.get(int(texel.x), int(texel.y));
-            color.r *= intensity;
-            color.g *= intensity;
-            color.b *= intensity;
-            image.set(p.x, p.y, color);
+            float intensity = intensitya*bCoords.w + intensityb*bCoords.u + intensityc*bCoords.v;
+            if (intensity < 0.0f) {
+                image.set(p.x, p.y, black);
+            } else {
+                color.r *= intensity;
+                color.g *= intensity;
+                color.b *= intensity;
+                image.set(p.x, p.y, color);
+            }
         }
     }
 }
 
-void lesson4()
+void lesson5()
 {
     Model model("obj/african_head.obj");
     TGAImage texture;
@@ -159,6 +163,7 @@ void lesson4()
         Vec3f vertexNormals[3];
         Vec3f screenCoords[3];
         Vec3f textureCoords[3];
+        float intensities[3];
 
         for (int j = 0; j < 3; j++) {
             faceVertices[j] = model.getVertex(face[j*3]);
@@ -171,25 +176,20 @@ void lesson4()
             textureCoords[j] = { textureVertices[j].x * texture.get_width(),
                                  textureVertices[j].y * texture.get_height(),
                                  textureVertices[j].z };
+            intensities[j] = -(vertexNormals[j] * lightVec);
         }
 
-        /* Lighting and backface culling. */
+        /* Backface culling. */
         Vec3f ab(faceVertices[1] - faceVertices[0]);
         Vec3f ac(faceVertices[2] - faceVertices[0]);
-        if ((ab ^ ac).z == 0.0f) {
-            // Degenerate triangle.
-            return;
-        }
-        Vec3f faceNormal = (ac ^ ab).normalized();
-        float intensity = faceNormal * lightVec;
-        if (intensity <= 0) {
-            // Backface.
+        if ((ab ^ ac) * cameraPos <= 0) {
             continue;
         }
 
         fillTriangle(screenCoords[0], screenCoords[1], screenCoords[2],
                      textureCoords[0], textureCoords[1], textureCoords[2],
-                     zBuffer, image, intensity, texture);
+                     intensities[0], intensities[1], intensities[2],
+                     zBuffer, image, texture);
     }
 
     image.flip_vertically();
@@ -198,6 +198,6 @@ void lesson4()
 
 int main(int argc, char** argv)
 {
-    lesson4();
+    lesson5();
     return 0;
 }
