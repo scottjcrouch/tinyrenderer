@@ -150,18 +150,26 @@ void lesson5()
     std::vector<float> zBuffer(image.get_width() * image.get_height(),
                                std::numeric_limits<float>::lowest());
 
-    Vec3f cameraPos(0, 0, 1.5);
+    Vec3f cameraPos(0, 0, 3);
 
     Matrix projection;
     projection[3][2] = -1.0f / cameraPos.z;
+
+    // Transform vectors from [-1, 1] -> [0, 2] range.
     Matrix translate;
     translate[0][3] = 1.0f;
     translate[1][3] = 1.0f;
     translate[2][3] = 1.0f;
+    // Transform vectors from [0, 2] -> [0, 1] range.
+    Matrix shrink;
+    shrink[0][0] = 0.5f;
+    shrink[1][1] = 0.5f;
+    shrink[2][2] = 0.5f;
+    // Stretch vectors from [0, 1] to some arbitrary range.
     Matrix stretch;
-    stretch[0][0] = width / 2.0f;
-    stretch[1][1] = height / 2.0f;
-    stretch[2][2] = depth / 2.0f;
+    stretch[0][0] = width;
+    stretch[1][1] = height;
+    stretch[2][2] = depth;
 
     Vec3f lightVec(0, 0, -1);
 
@@ -180,7 +188,7 @@ void lesson5()
             vertexNormals[j] = model.getVertexNormal(face[j*3 + 2]);
 
             faceVertices[j] = projection * faceVertices[j];
-            screenCoords[j] = stretch * (translate * faceVertices[j]);
+            screenCoords[j] = stretch * (shrink * (translate * faceVertices[j]));
 
             textureCoords[j] = { textureVertices[j].x * texture.get_width(),
                                  textureVertices[j].y * texture.get_height(),
