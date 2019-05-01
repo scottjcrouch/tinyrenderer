@@ -117,6 +117,44 @@ struct Matrix
                          v.x*m[2][0] + v.y*m[2][1] + v.z*m[2][2] + m[2][3] };
         return result * (1.0f / (v.x*m[3][0] + v.y*m[3][1] + v.z*m[3][2] + m[3][3]));
     }
+
+    inline Matrix operator *(const Matrix &rhs) const {
+        Matrix result;
+        for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 4; col++) {
+                result.m[row][col] = 0.0f;
+                for (int i = 0; i < 4; i++) {
+                    result.m[row][col] += m[row][i] * rhs.m[i][col];
+                }
+            }
+        }
+        return result;
+    }
 };
+
+Matrix project(float r)
+{
+    Matrix result;
+    result[3][2] = r;
+    return result;
+}
+
+Matrix translate(float xOffset, float yOffset, float zOffset)
+{
+    Matrix result;
+    result[0][3] = xOffset;
+    result[1][3] = yOffset;
+    result[2][3] = zOffset;
+    return result;
+}
+
+Matrix scale(float xFactor, float yFactor, float zFactor)
+{
+    Matrix result;
+    result[0][0] = xFactor;
+    result[1][1] = yFactor;
+    result[2][2] = zFactor;
+    return result;
+}
 
 #endif // __GEOMETRY_H__

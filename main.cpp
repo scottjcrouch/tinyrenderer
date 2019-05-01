@@ -147,29 +147,14 @@ void lesson5()
     texture.flip_vertically();
     constexpr int width = 800, height = 800, depth = 255;
     TGAImage image(width, height, TGAImage::RGB);
-    std::vector<float> zBuffer(image.get_width() * image.get_height(),
-                               std::numeric_limits<float>::lowest());
+    std::vector<float> zBuffer(width * height, std::numeric_limits<float>::lowest());
 
     Vec3f cameraPos(0, 0, 3);
+    Matrix projection = project(-1.0f / cameraPos.z);
 
-    Matrix projection;
-    projection[3][2] = -1.0f / cameraPos.z;
-
-    // Transform vectors from [-1, 1] -> [0, 2] range.
-    Matrix translate;
-    translate[0][3] = 1.0f;
-    translate[1][3] = 1.0f;
-    translate[2][3] = 1.0f;
-    // Transform vectors from [0, 2] -> [0, 1] range.
-    Matrix shrink;
-    shrink[0][0] = 0.5f;
-    shrink[1][1] = 0.5f;
-    shrink[2][2] = 0.5f;
-    // Stretch vectors from [0, 1] to some arbitrary range.
-    Matrix stretch;
-    stretch[0][0] = width;
-    stretch[1][1] = height;
-    stretch[2][2] = depth;
+    // Transform vectors from the [-1, 1] range to the image dimensions.
+    Matrix transformation =
+        scale(width, height, depth) * scale(0.5, 0.5, 0.5) * translate(1, 1, 1);
 
     Vec3f lightVec(0, 0, -1);
 
@@ -188,7 +173,7 @@ void lesson5()
             vertexNormals[j] = model.getVertexNormal(face[j*3 + 2]);
 
             faceVertices[j] = projection * faceVertices[j];
-            screenCoords[j] = stretch * (shrink * (translate * faceVertices[j]));
+            screenCoords[j] = transformation * faceVertices[j];
 
             textureCoords[j] = { textureVertices[j].x * texture.get_width(),
                                  textureVertices[j].y * texture.get_height(),
