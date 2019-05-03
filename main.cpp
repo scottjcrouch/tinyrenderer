@@ -153,7 +153,7 @@ void lesson5()
     Matrix projection = project(-1.0f / cameraPos.z);
 
     // Transform vectors from the [-1, 1] range to the image dimensions.
-    Matrix transformation =
+    Matrix viewport =
         scale(width, height, depth) * scale(0.5, 0.5, 0.5) * translate(1, 1, 1);
 
     Vec3f lightVec(0, 0, -1);
@@ -173,7 +173,7 @@ void lesson5()
             vertexNormals[j] = model.getVertexNormal(face[j*3 + 2]);
 
             faceVertices[j] = projection * faceVertices[j];
-            screenCoords[j] = transformation * faceVertices[j];
+            screenCoords[j] = viewport * faceVertices[j];
 
             textureCoords[j] = { textureVertices[j].x * texture.get_width(),
                                  textureVertices[j].y * texture.get_height(),
