@@ -20,6 +20,7 @@ struct Vec2
     Vec2(T _x, T _y) : x(_x), y(_y) { }
 
     inline bool operator ==(const Vec2<T> &v) const { return x==v.x && y==v.y; }
+    inline bool operator !=(const Vec2<T> &v) const { return !(*this == v); }
     inline Vec2<T> operator +(const Vec2<T> &v) const { return { x+v.x, y+v.y }; }
     inline Vec2<T> operator -(const Vec2<T> &v) const { return { x-v.x, y-v.y }; }
     inline Vec2<T> operator -() const { return { -x, -y }; }
@@ -47,7 +48,8 @@ struct Vec3
     Vec3() : x(0), y(0), z(0) { }
     Vec3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) { }
 
-    inline bool operator ==(const Vec2<T> &v) const { return x==v.x && y==v.y && z==v.z; }
+    inline bool operator ==(const Vec3<T> &v) const { return x==v.x && y==v.y && z==v.z; }
+    inline bool operator !=(const Vec3<T> &v) const { return !(*this == v); }
     inline Vec3<T> operator +(const Vec3<T> &v) const { return { x+v.x, y+v.y, z+v.z }; }
     inline Vec3<T> operator -(const Vec3<T> &v) const { return { x-v.x, y-v.y, z-v.z }; }
     inline Vec3<T> operator -() const { return { -x, -y, -z }; }
@@ -155,6 +157,23 @@ Matrix scale(float xFactor, float yFactor, float zFactor)
     result[1][1] = yFactor;
     result[2][2] = zFactor;
     return result;
+}
+
+Matrix lookAt(Vec3f eye, Vec3f point, Vec3f up)
+{
+    Vec3f zPrime = (eye - point).normalized();
+    assert((up ^ zPrime) != Vec3f(0,0,0)); // ensure up and the gaze direction aren't coincident
+    Vec3f xPrime = (up ^ zPrime).normalized();
+    Vec3f yPrime = (zPrime ^ xPrime).normalized();
+    Matrix translatePointToOrigin;
+    Matrix inverseAxesTransform;
+    for (int i = 0; i < 3; i++) {
+        translatePointToOrigin[i][3] = -point.raw[i];
+        inverseAxesTransform[0][i] = xPrime.raw[i];
+        inverseAxesTransform[1][i] = yPrime.raw[i];
+        inverseAxesTransform[2][i] = zPrime.raw[i];
+    }
+    return inverseAxesTransform * translatePointToOrigin;
 }
 
 #endif // __GEOMETRY_H__

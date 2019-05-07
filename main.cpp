@@ -149,14 +149,16 @@ void lesson5()
     TGAImage image(width, height, TGAImage::RGB);
     std::vector<float> zBuffer(width * height, std::numeric_limits<float>::lowest());
 
-    Vec3f cameraPos(0, 0, 3);
-    Matrix projection = project(-1.0f / cameraPos.z);
-
-    // Transform vectors from the [-1, 1] range to the image dimensions.
-    Matrix viewport =
-        scale(width, height, depth) * scale(0.5, 0.5, 0.5) * translate(1, 1, 1);
-
+    Vec3f camera(0, 0, 3);
     Vec3f lightVec(0, 0, -1);
+    Vec3f origin(0, 0, 0);
+
+    Vec3f eye(1, 1, 3);
+    Vec3f up(0, 1, 0);
+
+    Matrix modelView = lookAt(eye, origin, up);
+    Matrix projection = project(-1.0f / camera.z);
+    Matrix viewport = scale(width, height, depth) * scale(0.5, 0.5, 0.5) * translate(1, 1, 1);
 
     for (int i = 0; i < model.numFaces(); i++) {
         std::vector<int> face = model.getFace(i);
@@ -172,8 +174,7 @@ void lesson5()
             textureVertices[j] = model.getTextureVertex(face[j*3 + 1]);
             vertexNormals[j] = model.getVertexNormal(face[j*3 + 2]);
 
-            faceVertices[j] = projection * faceVertices[j];
-            screenCoords[j] = viewport * faceVertices[j];
+            screenCoords[j] = viewport * projection * modelView * faceVertices[j];
 
             textureCoords[j] = { textureVertices[j].x * texture.get_width(),
                                  textureVertices[j].y * texture.get_height(),
@@ -184,7 +185,7 @@ void lesson5()
         /* Backface culling. */
         Vec3f ab(faceVertices[1] - faceVertices[0]);
         Vec3f ac(faceVertices[2] - faceVertices[0]);
-        if ((ab ^ ac) * cameraPos <= 0) {
+        if ((ab ^ ac) * camera <= 0) {
             continue;
         }
 
