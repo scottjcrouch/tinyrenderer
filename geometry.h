@@ -134,14 +134,14 @@ struct Matrix
     }
 };
 
-Matrix project(float r)
+Matrix project(const float r)
 {
     Matrix result;
     result[3][2] = r;
     return result;
 }
 
-Matrix translate(float xOffset, float yOffset, float zOffset)
+Matrix translate(const float xOffset, const float yOffset, const float zOffset)
 {
     Matrix result;
     result[0][3] = xOffset;
@@ -150,12 +150,23 @@ Matrix translate(float xOffset, float yOffset, float zOffset)
     return result;
 }
 
-Matrix scale(float xFactor, float yFactor, float zFactor)
+Matrix scale(const float xFactor, const float yFactor, const float zFactor)
 {
     Matrix result;
     result[0][0] = xFactor;
     result[1][1] = yFactor;
     result[2][2] = zFactor;
+    return result;
+}
+
+Matrix basis(const Vec3f &col0, const Vec3f &col1, const Vec3f &col2)
+{
+    Matrix result;
+    for (int i = 0; i < 3; i++) {
+        result[0][i] = col0.raw[i];
+        result[1][i] = col1.raw[i];
+        result[2][i] = col2.raw[i];
+    }
     return result;
 }
 
@@ -165,14 +176,8 @@ Matrix lookAt(Vec3f eye, Vec3f point, Vec3f up)
     assert((up ^ zPrime) != Vec3f(0,0,0)); // ensure up and the gaze direction aren't coincident
     Vec3f xPrime = (up ^ zPrime).normalized();
     Vec3f yPrime = (zPrime ^ xPrime).normalized();
-    Matrix translatePointToOrigin;
-    Matrix inverseAxesTransform;
-    for (int i = 0; i < 3; i++) {
-        translatePointToOrigin[i][3] = -point.raw[i];
-        inverseAxesTransform[0][i] = xPrime.raw[i];
-        inverseAxesTransform[1][i] = yPrime.raw[i];
-        inverseAxesTransform[2][i] = zPrime.raw[i];
-    }
+    Matrix translatePointToOrigin = translate(-point.x, -point.y, -point.z);
+    Matrix inverseAxesTransform = basis(xPrime, yPrime, zPrime);
     return inverseAxesTransform * translatePointToOrigin;
 }
 
