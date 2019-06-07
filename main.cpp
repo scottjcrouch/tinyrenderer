@@ -7,6 +7,7 @@
 #include "tgaimage.h"
 #include "model.h"
 #include "geometry.h"
+#include "gl.h"
 
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor black = TGAColor(  0,   0,   0, 255);
@@ -14,187 +15,75 @@ const TGAColor red   = TGAColor(255,   0,   0, 255);
 const TGAColor green = TGAColor(  0, 255,   0, 255);
 const TGAColor blue  = TGAColor(  0,   0, 255, 255);
 
-void drawLine(Vec2i p0, Vec2i p1,
-              TGAImage &image, const TGAColor &color)
-{
-    // To draw a line, the basic method is to draw one dot for every x
-    // coordinate between the two points, and interpolate on y.  However, if
-    // the line is steep on y, then this will result in gaps in the line.  We
-    // can solve this problem by checking if the line is steep, and if so,
-    // draw by iterating over y while interpolating on x.
-    bool isSteep = false;
-    if (std::abs(p0.x - p1.x) < std::abs(p0.y - p1.y)) {
-        std::swap(p0.x, p0.y);
-        std::swap(p1.x, p1.y);
-        isSteep = true;
+Model model;
+TGAImage texture;
+
+constexpr int width = 800, height = 800, depth = 255;
+TGAImage output(width, height, TGAImage::RGB);
+std::vector<float> zBuffer(width * height, std::numeric_limits<float>::lowest());
+
+Vec3f lightVec(0, 0, 1);
+Vec3f origin(0, 0, 0);
+// Vec3f eye(1, 1, 3);
+Vec3f eye(0, 0, 3);
+Vec3f up(0, 1, 0);
+
+struct GouraudShader : public IShader {
+    Vec3f varyingIntensity; // written by vertex shader, read by fragment shader
+
+    virtual Vec3f vertex(int faceIndex, int vertexIndex) {
+        std::vector<int> face = model.getFace(faceIndex);
+        varyingIntensity.raw[vertexIndex] =
+            std::max(0.f, model.getVertexNormal(face[vertexIndex*3 + 2]) * lightVec);
+        Vec3f glVertex = model.getVertex(face[vertexIndex*3]);
+        return viewPort * projection * modelView * glVertex;
     }
 
-    // Make p0 be the leftmost point.
-    if (p0.x > p1.x) {
-        std::swap(p0.x, p1.x);
-        std::swap(p0.y, p1.y);
+    virtual bool fragment(const Vec3f &baryCoords, TGAColor &color) {
+        float intensity = varyingIntensity * baryCoords;
+        color.r = 255 * intensity;
+        color.g = 255 * intensity;
+        color.b = 255 * intensity;
+        return false; // don't discard this pixel
+
+        // float intensity = varyingIntensity*baryCoords;
+        // if (intensity>.85) intensity = 1;
+        // else if (intensity>.60) intensity = .80;
+        // else if (intensity>.45) intensity = .60;
+        // else if (intensity>.30) intensity = .45;
+        // else if (intensity>.15) intensity = .30;
+        // else intensity = 0;
+        // color.r = 255 * intensity;
+        // color.g = 155 * intensity;
+        // color.b = 0;
+        // return false;
     }
-
-    // Normally, each iteration we increment x by 1 and y by dy/dx, then round
-    // y to the nearest pixel.  To save division ops, we pull the calculation
-    // of dy/dx out of the loop (derror).  From there, using dimensional
-    // analysis to eliminate terms, we can eliminate the need to use division
-    // ops altogether.
-    int dx = p1.x - p0.x;
-    int dy = p1.y - p0.y;
-    int derror2 = std::abs(dy) * 2;
-    int error2 = 0;
-    for (int x = p0.x, y = p0.y; x <= p1.x; x++) {
-        if (isSteep) {
-            image.set(y, x, color);
-        } else {
-            image.set(x, y, color);
-        }
-
-        error2 += derror2;
-        if (error2 > dx) {
-            y += ((p1.y > p0.y) ? 1 : -1);
-            error2 -= (dx * 2);
-        }
-    }
-}
-
-void drawTriangle(const Vec2i &a, const Vec2i &b, const Vec2i &c,
-                  TGAImage &image, const TGAColor &color)
-{
-    drawLine(a, b, image, color);
-    drawLine(b, c, image, color);
-    drawLine(c, a, image, color);
-}
-
-void drawSquare(const Vec2i &min, const Vec2i &max,
-                TGAImage &image, const TGAColor &color)
-{
-    drawLine(min, {min.x, max.y}, image, color);
-    drawLine(min, {max.x, min.y}, image, color);
-    drawLine(max, {min.x, max.y}, image, color);
-    drawLine(max, {max.x, min.y}, image, color);
-}
-
-void fillTriangle(const std::array<Vec3f, 3> &vertices,
-                  const std::array<Vec3f, 3> &textureVertices,
-                  const std::array<float, 3> &intensities,
-                  std::vector<float> &zBuffer,
-                  TGAImage &image,
-                  TGAImage &texture)
-{
-    const Vec3f &a = vertices[0];
-    const Vec3f &b = vertices[1];
-    const Vec3f &c = vertices[2];
-
-    Vec3f ab(b - a);
-    Vec3f ac(c - a);
-
-    // Ensure triangle is not degenerate.
-    assert((ab ^ ac).z != 0.0f);
-
-    // Get the on-screen bounding box for the triangle.
-    int width = image.get_width();
-    int height = image.get_height();
-    Vec2i imageMin = { 0, 0 };
-    Vec2i imageMax = { width, height };
-    Vec2i lowBound(int(std::min({ a.x, b.x, c.x })),
-                   int(std::min({ a.y, b.y, c.y })));
-    Vec2i highBound(int(std::ceil(std::max({ a.x, b.x, c.x }))),
-                    int(std::ceil(std::max({ a.y, b.y, c.y }))));
-    clampVec2(lowBound, imageMin, imageMax);
-    clampVec2(highBound, imageMin, imageMax);
-
-    Vec3f p;
-    for (p.y = lowBound.y; p.y < highBound.y; p.y++) {
-        for (p.x = lowBound.x; p.x < highBound.x; p.x++) {
-            Vec3f ap(p - a);
-            Vec3f bary = barycentricCoords(ab, ac, ap);
-            if (bary.u < 0 ||
-                bary.v < 0 ||
-                bary.w < 0) {
-                continue;
-            }
-            p.z = a.z*bary.w + b.z*bary.u + c.z*bary.v;
-            if (zBuffer[int(p.y*width + p.x)] >= p.z) {
-                continue;
-            }
-            zBuffer[int(p.y*width + p.x)] = p.z;
-            Vec3f texel = textureVertices[0] * bary.w +
-                         textureVertices[1] * bary.u +
-                         textureVertices[2] * bary.v;
-            TGAColor color = texture.get(int(texel.x), int(texel.y));
-            float intensity = intensities[0] * bary.w +
-                         intensities[1] * bary.u +
-                         intensities[2] * bary.v;
-            if (intensity < 0.0f) {
-                image.set(p.x, p.y, black);
-            } else {
-                color.r *= intensity;
-                color.g *= intensity;
-                color.b *= intensity;
-                image.set(p.x, p.y, color);
-            }
-        }
-    }
-}
+};
 
 void lesson5()
 {
-    Model model("obj/african_head.obj");
-    TGAImage texture;
+    model.readFile("obj/african_head.obj");
     texture.read_tga_file("obj/african_head_diffuse.tga");
     texture.flip_vertically();
-    constexpr int width = 800, height = 800, depth = 255;
-    TGAImage image(width, height, TGAImage::RGB);
-    std::vector<float> zBuffer(width * height, std::numeric_limits<float>::lowest());
 
-    Vec3f camera(0, 0, 3);
-    Vec3f lightVec(0, 0, -1);
-    Vec3f origin(0, 0, 0);
+    lookAt(eye, origin, up);
+    view(0, 0, width, height);
+    project(-1.0f / (eye-origin).magnitude());
 
-    Vec3f eye(1, 1, 3);
-    Vec3f up(0, 1, 0);
+    GouraudShader shader;
 
-    Matrix modelView = lookAt(eye, origin, up);
-    Matrix projection = project(-1.0f / camera.z);
-    Matrix viewport = scale(width, height, depth) * scale(0.5, 0.5, 0.5) * translate(1, 1, 1);
-
-    for (int i = 0; i < model.numFaces(); i++) {
-        std::vector<int> face = model.getFace(i);
-        std::array<Vec3f, 3> faceVertices;
-        std::array<Vec3f, 3> textureVertices;
-        std::array<Vec3f, 3> vertexNormals;
+    for (int faceIndex = 0; faceIndex < model.numFaces(); faceIndex++) {
         std::array<Vec3f, 3> screenCoords;
-        std::array<Vec3f, 3> textureCoords;
-        std::array<float, 3> intensities;
 
-        for (int j = 0; j < 3; j++) {
-            faceVertices[j] = model.getVertex(face[j*3]);
-            textureVertices[j] = model.getTextureVertex(face[j*3 + 1]);
-            vertexNormals[j] = model.getVertexNormal(face[j*3 + 2]);
-
-            screenCoords[j] = viewport * projection * modelView * faceVertices[j];
-
-            textureCoords[j] = { textureVertices[j].x * texture.get_width(),
-                                 textureVertices[j].y * texture.get_height(),
-                                 textureVertices[j].z };
-            intensities[j] = -(vertexNormals[j] * lightVec);
+        for (int vertexIndex = 0; vertexIndex < 3; vertexIndex++) {
+            screenCoords[vertexIndex] = shader.vertex(faceIndex, vertexIndex);
         }
 
-        /* Backface culling. */
-        Vec3f ab(faceVertices[1] - faceVertices[0]);
-        Vec3f ac(faceVertices[2] - faceVertices[0]);
-        if ((ab ^ ac) * camera <= 0) {
-            continue;
-        }
-
-        fillTriangle(screenCoords, textureCoords, intensities,
-                     zBuffer, image, texture);
+        drawTriangle(screenCoords, shader, output, zBuffer);
     }
 
-    image.flip_vertically();
-    image.write_tga_file("output.tga");
+    output.flip_vertically();
+    output.write_tga_file("output.tga");
 }
 
 int main(int argc, char** argv)

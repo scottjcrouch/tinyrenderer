@@ -3,15 +3,16 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
-#include <cassert>
 
 #include "model.h"
 
-Model::Model(const char *filename) : vertices(), faces()
+bool Model::readFile(const char *filename)
 {
     std::ifstream in;
     in.open(filename, std::ifstream::in);
-    assert(!in.fail());
+    if (in.fail()) {
+        return false;
+    }
 
     std::string line;
     while (!in.eof()) {
@@ -48,6 +49,8 @@ Model::Model(const char *filename) : vertices(), faces()
             vertexNormals.emplace_back(i, j, k);
         }
     }
+
+    return true;
 }
 
 int Model::numFaces() { return faces.size(); }

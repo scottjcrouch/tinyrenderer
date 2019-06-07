@@ -8,7 +8,7 @@
 class Model
 {
 public:
-    Model(const char *filename);
+    bool readFile(const char *filename);
 
     int numFaces();
     std::vector<int> getFace(int index);

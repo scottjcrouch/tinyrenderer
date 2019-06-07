@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <cassert>
+#include <array>
 
 template <typename T> struct Vec2;
 template <typename T> struct Vec3;
@@ -133,52 +134,5 @@ struct Matrix
         return result;
     }
 };
-
-Matrix project(const float r)
-{
-    Matrix result;
-    result[3][2] = r;
-    return result;
-}
-
-Matrix translate(const float xOffset, const float yOffset, const float zOffset)
-{
-    Matrix result;
-    result[0][3] = xOffset;
-    result[1][3] = yOffset;
-    result[2][3] = zOffset;
-    return result;
-}
-
-Matrix scale(const float xFactor, const float yFactor, const float zFactor)
-{
-    Matrix result;
-    result[0][0] = xFactor;
-    result[1][1] = yFactor;
-    result[2][2] = zFactor;
-    return result;
-}
-
-Matrix basis(const Vec3f &col0, const Vec3f &col1, const Vec3f &col2)
-{
-    Matrix result;
-    for (int i = 0; i < 3; i++) {
-        result[0][i] = col0.raw[i];
-        result[1][i] = col1.raw[i];
-        result[2][i] = col2.raw[i];
-    }
-    return result;
-}
-
-Matrix lookAt(Vec3f eye, Vec3f point, Vec3f up)
-{
-    Vec3f zPrime = (eye - point).normalized();
-    assert((up ^ zPrime) != Vec3f(0,0,0)); // ensure up and the gaze direction aren't coincident
-    Vec3f xPrime = (up ^ zPrime).normalized();
-    Vec3f yPrime = (zPrime ^ xPrime).normalized();
-    Matrix translatePointToOrigin = translate(-point.x, -point.y, -point.z);
-    Matrix inverseAxesTransform = basis(xPrime, yPrime, zPrime);
-    return inverseAxesTransform * translatePointToOrigin;
-}
 
 #endif // __GEOMETRY_H__
