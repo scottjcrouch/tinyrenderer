@@ -41,22 +41,19 @@ struct GouraudShader : public IShader {
     virtual bool fragment(const Vec3f &baryCoords, TGAColor &color) {
         float intensity = varyingIntensity * baryCoords;
         assert(intensity >= 0.0 && intensity <= 1.0);
-        color.r = 255 * intensity;
-        color.g = 255 * intensity;
-        color.b = 255 * intensity;
-        return false; // don't discard this pixel
 
-        // float intensity = varyingIntensity*baryCoords;
-        // if (intensity>.85) intensity = 1;
-        // else if (intensity>.60) intensity = .80;
-        // else if (intensity>.45) intensity = .60;
-        // else if (intensity>.30) intensity = .45;
-        // else if (intensity>.15) intensity = .30;
-        // else intensity = 0;
-        // color.r = 255 * intensity;
-        // color.g = 155 * intensity;
-        // color.b = 0;
-        // return false;
+        if (intensity>.85) intensity = 1;
+        else if (intensity>.60) intensity = .80;
+        else if (intensity>.45) intensity = .60;
+        else if (intensity>.30) intensity = .45;
+        else if (intensity>.15) intensity = .30;
+        else intensity = 0;
+
+        color.r = 255 * intensity;
+        color.g = 155 * intensity;
+        color.b = 0;
+
+        return false;
     }
 };
 
