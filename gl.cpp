@@ -110,7 +110,7 @@ void drawTriangle(const std::array<Vec3f, 3> &vertices,
                 bary.w < 0) {
                 continue;
             }
-            p.z = a.z*bary.w + b.z*bary.u + c.z*bary.v;
+            p.z = a.z*bary.u + b.z*bary.v + c.z*bary.w;
             if (zBuffer[int(p.y*width + p.x)] >= p.z) {
                 continue;
             }

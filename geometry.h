@@ -73,12 +73,12 @@ using Vec3i = Vec3<int>;
 template <typename T>
 Vec3f barycentricCoords(T ab, T ac, T ap)
 {
-    T pa(-ap);
-    auto cross = Vec3f(ab.x, ac.x, pa.x) ^ Vec3f(ab.y, ac.y, pa.y);
+    T pa = -ap;
+    auto cross = Vec3f(ac.x, ab.x, pa.x) ^ Vec3f(ac.y, ab.y, pa.y);
     assert(cross.z != 0.0f);
-    return Vec3f(cross.x / cross.z,
+    return Vec3f(1.0 - ((cross.x + cross.y) / cross.z),
                  cross.y / cross.z,
-                 1.0 - ((cross.x + cross.y) / cross.z));
+                 cross.x / cross.z);
 }
 
 template <class T>

@@ -22,10 +22,9 @@ constexpr int width = 800, height = 800, depth = 255;
 TGAImage output(width, height, TGAImage::RGB);
 std::vector<float> zBuffer(width * height, std::numeric_limits<float>::lowest());
 
-Vec3f lightVec(0, 0, 1);
+Vec3f lightVec = Vec3f(1, 1, 1).normalized();
 Vec3f origin(0, 0, 0);
-// Vec3f eye(1, 1, 3);
-Vec3f eye(0, 0, 3);
+Vec3f eye(1, 1, 3);
 Vec3f up(0, 1, 0);
 
 struct GouraudShader : public IShader {
@@ -41,6 +40,7 @@ struct GouraudShader : public IShader {
 
     virtual bool fragment(const Vec3f &baryCoords, TGAColor &color) {
         float intensity = varyingIntensity * baryCoords;
+        assert(intensity >= 0.0 && intensity <= 1.0);
         color.r = 255 * intensity;
         color.g = 255 * intensity;
         color.b = 255 * intensity;
