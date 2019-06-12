@@ -28,12 +28,19 @@ Vec3f eye(1, 1, 3);
 Vec3f up(0, 1, 0);
 
 struct GouraudShader : public IShader {
-    Vec3f varyingIntensity; // written by vertex shader, read by fragment shader
+    Vec3f varyingIntensity;
+    std::array<Vec3f, 3> textureVertices;
 
     virtual Vec3f vertex(int faceIndex, int vertexIndex) {
         std::vector<int> face = model.getFace(faceIndex);
+
         varyingIntensity.raw[vertexIndex] =
             std::max(0.f, model.getVertexNormal(face[vertexIndex*3 + 2]) * lightVec);
+        textureVertices[vertexIndex] =
+            model.getTextureVertex(face[vertexIndex*3 + 1]);
+        textureVertices[vertexIndex].x *= texture.get_width();
+        textureVertices[vertexIndex].y *= texture.get_height();
+
         Vec3f glVertex = model.getVertex(face[vertexIndex*3]);
         return viewPort * projection * modelView * glVertex;
     }
@@ -41,17 +48,14 @@ struct GouraudShader : public IShader {
     virtual bool fragment(const Vec3f &baryCoords, TGAColor &color) {
         float intensity = varyingIntensity * baryCoords;
         assert(intensity >= 0.0 && intensity <= 1.0);
-
-        if (intensity>.85) intensity = 1;
-        else if (intensity>.60) intensity = .80;
-        else if (intensity>.45) intensity = .60;
-        else if (intensity>.30) intensity = .45;
-        else if (intensity>.15) intensity = .30;
-        else intensity = 0;
-
-        color.r = 255 * intensity;
-        color.g = 155 * intensity;
-        color.b = 0;
+        Vec3f texel =
+            textureVertices[0] * baryCoords.u +
+            textureVertices[1] * baryCoords.v +
+            textureVertices[2] * baryCoords.w;
+        color = texture.get(int(texel.x), int(texel.y));
+        color.r *= intensity;
+        color.g *= intensity;
+        color.b *= intensity;
 
         return false;
     }
