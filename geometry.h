@@ -133,6 +133,82 @@ struct Matrix
         }
         return result;
     }
+
+    inline Matrix operator *(const float &scalar) const {
+        Matrix result;
+        for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 4; col++) {
+                result.m[row][col] = m[row][col] * scalar;
+            }
+        }
+        return result;
+    }
+
+    inline float determinant() {
+        return
+            m[0][3]*m[1][2]*m[2][1]*m[3][0] - m[0][2]*m[1][3]*m[2][1]*m[3][0] -
+            m[0][3]*m[1][1]*m[2][2]*m[3][0] + m[0][1]*m[1][3]*m[2][2]*m[3][0] +
+            m[0][2]*m[1][1]*m[2][3]*m[3][0] - m[0][1]*m[1][2]*m[2][3]*m[3][0] -
+            m[0][3]*m[1][2]*m[2][0]*m[3][1] + m[0][2]*m[1][3]*m[2][0]*m[3][1] +
+            m[0][3]*m[1][0]*m[2][2]*m[3][1] - m[0][0]*m[1][3]*m[2][2]*m[3][1] -
+            m[0][2]*m[1][0]*m[2][3]*m[3][1] + m[0][0]*m[1][2]*m[2][3]*m[3][1] +
+            m[0][3]*m[1][1]*m[2][0]*m[3][2] - m[0][1]*m[1][3]*m[2][0]*m[3][2] -
+            m[0][3]*m[1][0]*m[2][1]*m[3][2] + m[0][0]*m[1][3]*m[2][1]*m[3][2] +
+            m[0][1]*m[1][0]*m[2][3]*m[3][2] - m[0][0]*m[1][1]*m[2][3]*m[3][2] -
+            m[0][2]*m[1][1]*m[2][0]*m[3][3] + m[0][1]*m[1][2]*m[2][0]*m[3][3] +
+            m[0][2]*m[1][0]*m[2][1]*m[3][3] - m[0][0]*m[1][2]*m[2][1]*m[3][3] -
+            m[0][1]*m[1][0]*m[2][2]*m[3][3] + m[0][0]*m[1][1]*m[2][2]*m[3][3];
+    }
+
+    inline Matrix minor(int row, int col) {
+        Matrix result;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                result[i][j] = m[i<row ? i : i+1][j<col ? j : j+1];
+            }
+        }
+        return result;
+    }
+
+    inline float cofactor(int row, int col) {
+        Matrix min = minor(row, col);
+
+        double aei = min[0][0]*min[1][1]*min[2][2];
+	double afh = min[0][0]*min[1][2]*min[2][1];
+	double bfg = min[0][1]*min[1][2]*min[2][0];
+	double bdi = min[0][1]*min[1][0]*min[2][2];
+	double cdh = min[0][2]*min[1][0]*min[2][1];
+	double ceg = min[0][2]*min[1][1]*min[2][0];
+	float det = (aei - afh) + (bfg - bdi) + (cdh - ceg);
+
+        return det * ((row + col) % 2 ? -1 : 1);
+    }
+
+    inline Matrix adjugate() {
+        Matrix result;
+        for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 4; col++) {
+                result[row][col] = cofactor(row, col);
+            }
+        }
+        return result;
+    }
+
+    inline Matrix inverse() {
+        float det = determinant();
+        assert(det != 0.0f);
+        return adjugate() * (1 / det);
+    }
+
+    inline Matrix transpose() {
+        Matrix result;
+        for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 4; col++) {
+                result.m[row][col] = m[col][row];
+            }
+        }
+        return result;
+    }
 };
 
 #endif // __GEOMETRY_H__
