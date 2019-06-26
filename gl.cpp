@@ -5,9 +5,9 @@
 #include "geometry.h"
 #include "gl.h"
 
-Matrix viewPort;
+Matrix viewport;
 Matrix projection;
-Matrix modelView;
+Matrix modelview;
 
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor black = TGAColor(  0,   0,   0, 255);
@@ -18,12 +18,12 @@ const TGAColor blue  = TGAColor(  0,   0, 255, 255);
 void view(int minX, int minY, int width, int height)
 {
     constexpr float depth = 255.0;
-    viewPort[0][0] = width/2;
-    viewPort[1][1] = height/2;
-    viewPort[2][2] = depth/2;
-    viewPort[0][3] = minX + width/2;
-    viewPort[1][3] = minY + height/2;
-    viewPort[2][3] = depth/2;
+    viewport[0][0] = width/2;
+    viewport[1][1] = height/2;
+    viewport[2][2] = depth/2;
+    viewport[0][3] = minX + width/2;
+    viewport[1][3] = minY + height/2;
+    viewport[2][3] = depth/2;
 }
 
 void project(const float coeff)
@@ -68,7 +68,7 @@ void lookAt(Vec3f eye, Vec3f point, Vec3f up)
     Vec3f yPrime = (zPrime ^ xPrime).normalized();
     Matrix translatePointToOrigin = translate(-point.x, -point.y, -point.z);
     Matrix inverseAxesTransform = basis(xPrime, yPrime, zPrime);
-    modelView = inverseAxesTransform * translatePointToOrigin;
+    modelview = inverseAxesTransform * translatePointToOrigin;
 }
 
 void drawTriangle(const std::array<Vec3f, 3> &vertices,

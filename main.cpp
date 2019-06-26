@@ -32,8 +32,9 @@ Vec3f       up(0, 1, 0);
 
 struct GouraudShader : public IShader {
     std::array<Vec3f, 3> textureVertices;
-    Matrix uniform_projModelView;
-    Matrix uniform_projModelViewInvTransp;
+    Matrix uniform_projModelview;
+    Matrix uniform_projModelviewIT;
+    Matrix uniform_viewportProjModelview;
 
     virtual Vec3f vertex(int faceIndex, int vertexIndex) {
         std::vector<int> face = model.getFace(faceIndex);
@@ -44,7 +45,7 @@ struct GouraudShader : public IShader {
         textureVertices[vertexIndex].y *= texture.get_height();
 
         Vec3f glVertex = model.getVertex(face[vertexIndex*3]);
-        return viewPort * projection * modelView * glVertex;
+        return uniform_viewportProjModelview * glVertex;
     }
 
     virtual bool fragment(const Vec3f &baryCoords, TGAColor &color) {
@@ -60,8 +61,8 @@ struct GouraudShader : public IShader {
                            (normalMapColor.b / 255.0f) * 2.0f - 1.0f);
 
         float intensity =
-            (uniform_projModelViewInvTransp * vertexNormal).normalized() *
-            (uniform_projModelView * lightVec).normalized();
+            (uniform_projModelviewIT * vertexNormal).normalized() *
+            (uniform_projModelview * lightVec).normalized();
         assert(intensity <= 1.0f);
         if (intensity < 0.0f) {
             intensity = 0.0;
@@ -88,8 +89,9 @@ void lesson5()
     project(-1.0f / (eye-origin).magnitude());
 
     GouraudShader shader;
-    shader.uniform_projModelView = projection * modelView;
-    shader.uniform_projModelViewInvTransp = (projection * modelView).inverse().transpose();
+    shader.uniform_projModelview = projection * modelview;
+    shader.uniform_projModelviewIT = (projection * modelview).inverse().transpose();
+    shader.uniform_viewportProjModelview = viewport * projection * modelview;
 
     for (int faceIndex = 0; faceIndex < model.numFaces(); faceIndex++) {
         std::array<Vec3f, 3> screenCoords;

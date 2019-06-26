@@ -5,9 +5,9 @@
 #include "geometry.h"
 
 // Globals defined in gl.cpp
-extern Matrix viewPort;
+extern Matrix viewport;
 extern Matrix projection;
-extern Matrix modelView;
+extern Matrix modelview;
 
 // These modify the viewport, projection, and modelView matrices respectively,
 // and are useful for implementing the vertex shader.
