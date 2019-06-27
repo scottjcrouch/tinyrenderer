@@ -76,7 +76,7 @@ struct GouraudShader : public IShader {
     }
 };
 
-void lesson5()
+void lesson6()
 {
     model.readFile("obj/african_head.obj");
     texture.read_tga_file("obj/african_head_diffuse.tga");
@@ -109,6 +109,6 @@ void lesson5()
 
 int main(int argc, char** argv)
 {
-    lesson5();
+    lesson6();
     return 0;
 }
