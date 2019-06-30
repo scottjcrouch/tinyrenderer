@@ -5,11 +5,24 @@
 #include <vector>
 
 #include "model.h"
+#include "tgaimage.h"
 
-bool Model::readFile(const char *filename)
+Model::Model(std::string path)
+{
+    if (!loadObj(path + ".obj"))
+        assert(0);
+    if (!loadDiffuseMap(path + "_diffuse.tga"))
+        assert(0);
+    if (!loadNormalMap(path + "_nm.tga"))
+        assert(0);
+    if (!loadSpecularMap(path + "_spec.tga"))
+        assert(0);
+}
+
+bool Model::loadObj(std::string filename)
 {
     std::ifstream in;
-    in.open(filename, std::ifstream::in);
+    in.open(filename.c_str(), std::ifstream::in);
     if (in.fail()) {
         return false;
     }
@@ -42,7 +55,7 @@ bool Model::readFile(const char *filename)
         } else if (!line.compare(0, 3, "vt ")) {
             float u, v, w;
             iss >> dummy_char >> dummy_char >> u >> v >> w;
-            textureVertices.emplace_back(u, v, w);
+            textureVertices.emplace_back(u, v);
         } else if (!line.compare(0, 3, "vn ")) {
             float i, j, k;
             iss >> dummy_char >> dummy_char >> i >> j >> k;
@@ -53,12 +66,92 @@ bool Model::readFile(const char *filename)
     return true;
 }
 
-int Model::numFaces() { return faces.size(); }
+bool Model::loadDiffuseMap(std::string path)
+{
+    return
+        diffuseMap.read_tga_file(path.c_str()) &&
+        diffuseMap.flip_vertically();
+}
 
-std::vector<int> Model::getFace(int index) { return faces[index]; }
+bool Model::loadNormalMap(std::string path)
+{
+    return
+        normalMap.read_tga_file(path.c_str()) &&
+        normalMap.flip_vertically();
+}
 
-Vec3f Model::getVertex(int index) { return vertices[index]; }
+bool Model::loadSpecularMap(std::string path)
+{
+    return
+        specularMap.read_tga_file(path.c_str()) &&
+        specularMap.flip_vertically();
+}
 
-Vec3f Model::getTextureVertex(int index) { return textureVertices[index]; }
+int Model::numFaces()
+{
+    return faces.size();
+}
 
-Vec3f Model::getVertexNormal(int index) { return vertexNormals[index]; }
+Vec3f Model::getVertex(int faceIndex, int vertexIndex)
+{
+    assert(faceIndex >= 0 && faceIndex < (int)faces.size());
+    assert(vertexIndex >= 0 && vertexIndex < 3);
+    int index = faces[faceIndex][vertexIndex*3];
+    assert(index >= 0 && index < (int)vertices.size());
+    return vertices[index];
+}
+
+Vec2f Model::getTextureVertex(int faceIndex, int vertexIndex)
+{
+    assert(faceIndex >= 0 && faceIndex < (int)faces.size());
+    assert(vertexIndex >= 0 && vertexIndex < 3);
+    int index = faces[faceIndex][vertexIndex*3 + 1];
+    assert(index >= 0 && index < (int)textureVertices.size());
+    return textureVertices[index];
+}
+
+Vec3f Model::getVertexNormal(int faceIndex, int vertexIndex)
+{
+    assert(faceIndex >= 0 && faceIndex < (int)faces.size());
+    assert(vertexIndex >= 0 && vertexIndex < 3);
+    int index = faces[faceIndex][vertexIndex*3 + 2];
+    assert(index >= 0 && index < (int)vertexNormals.size());
+    return vertexNormals[index];
+}
+
+TGAColor Model::getTextureColor(Vec2f uv)
+{
+    assert(uv.u >= 0.0 && uv.u <= 1.0);
+    assert(uv.v >= 0.0 && uv.v <= 1.0);
+
+    Vec2i texel(uv.u * diffuseMap.get_width(),
+                uv.v * diffuseMap.get_height());
+
+    return diffuseMap.get(texel.x, texel.y);
+}
+
+Vec3f Model::getTextureNormal(Vec2f uv)
+{
+    assert(uv.u >= 0.0 && uv.u <= 1.0);
+    assert(uv.v >= 0.0 && uv.v <= 1.0);
+
+    Vec2i texel(uv.u * normalMap.get_width(),
+                uv.v * normalMap.get_height());
+    TGAColor normalColor = normalMap.get(texel.u, texel.y);
+    Vec3f vertexNormal((normalColor.r / 255.0f) * 2.0f - 1.0f,
+                       (normalColor.g / 255.0f) * 2.0f - 1.0f,
+                       (normalColor.b / 255.0f) * 2.0f - 1.0f);
+
+    return vertexNormal;
+}
+
+float Model::getSpecularPower(Vec2f uv)
+{
+    assert(uv.u >= 0.0 && uv.u <= 1.0);
+    assert(uv.v >= 0.0 && uv.v <= 1.0);
+
+    Vec2i texel(uv.u * specularMap.get_width(),
+                uv.v * specularMap.get_height());
+
+    return specularMap.get(texel.x, texel.y).raw[0] / 1.0f;
+}
