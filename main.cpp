@@ -23,8 +23,8 @@ TGAImage output(width, height, TGAImage::RGB);
 std::vector<float> zBuffer(width * height, std::numeric_limits<float>::lowest());
 
 Vec3f origin(0, 0, 0);
-Vec3f lightVec = Vec3f(1, 1, 0).normalized();
-Vec3f eye(1, 1, 4);
+Vec3f lightVec = Vec3f(1, 1, 1).normalized();
+Vec3f eye(1, 1, 3);
 Vec3f up(0, 1, 0);
 
 struct GouraudShader : public IShader {
@@ -45,6 +45,9 @@ struct GouraudShader : public IShader {
             textureVertices[1] * baryCoords.v +
             textureVertices[2] * baryCoords.w;
 
+        // The actual "transpose" portion of the inverse transpose happens
+        // here, by representing the normal as a column (vector) instead of a
+        // row.
         Vec3f textureNormal = model->getTextureNormal(texel);
         float intensity =
             (uniform_projModelviewIT * textureNormal).normalized() *
@@ -67,7 +70,7 @@ void lesson6()
 
     GouraudShader shader;
     shader.uniform_projModelview = projection * modelview;
-    shader.uniform_projModelviewIT = (projection * modelview).inverse().transpose();
+    shader.uniform_projModelviewIT = (projection * modelview).inverse();
     shader.uniform_viewportProjModelview = viewport * projection * modelview;
 
     for (int faceIndex = 0; faceIndex < model->numFaces(); faceIndex++) {

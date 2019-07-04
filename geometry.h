@@ -199,16 +199,6 @@ struct Matrix
         assert(det != 0.0f);
         return adjugate() * (1 / det);
     }
-
-    inline Matrix transpose() {
-        Matrix result;
-        for (int row = 0; row < 4; row++) {
-            for (int col = 0; col < 4; col++) {
-                result.m[row][col] = m[col][row];
-            }
-        }
-        return result;
-    }
 };
 
 #endif // __GEOMETRY_H__
