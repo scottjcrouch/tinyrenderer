@@ -45,18 +45,38 @@ struct GouraudShader : public IShader {
             textureVertices[1] * baryCoords.v +
             textureVertices[2] * baryCoords.w;
 
+        TGAColor textureColor = model->getTextureColor(texel);
+
         // The actual "transpose" portion of the inverse transpose happens
         // here, by representing the normal as a column (vector) instead of a
         // row.
         Vec3f textureNormal = model->getTextureNormal(texel);
-        float intensity =
-            (uniform_projModelviewIT * textureNormal).normalized() *
-            (uniform_projModelview * lightVec).normalized();
-        assert(intensity <= 1.0f);
-        if (intensity < 0.0f)
-            intensity = 0.0f;
+        Vec3f transformedNormal = (uniform_projModelviewIT * textureNormal).normalized();
+        Vec3f transformedLightVec = (uniform_projModelview * lightVec).normalized();
+        float diffuseIntensity = transformedNormal * transformedLightVec;
+        assert(diffuseIntensity <= 1.0f);
+        if (diffuseIntensity < 0.0f)
+            diffuseIntensity = 0.0f;
+        TGAColor diffuseColor = textureColor * diffuseIntensity;
 
-        color = model->getTextureColor(texel) * intensity;
+        float specularPower = model->getSpecularPower(texel);
+        Vec3f reflection = (transformedNormal*2 - transformedLightVec).normalized();
+        float specularIntensity = std::pow(std::max(reflection.z, 0.0f), specularPower);
+        assert(specularIntensity <= 1.0f);
+        if (specularIntensity < 0.0f)
+            specularIntensity = 0.0f;
+        TGAColor specularColor = textureColor * specularIntensity;
+
+        constexpr float ambientCoeff = 0.1f;
+        constexpr float diffuseCoeff = 1.0f;
+        constexpr float specularCoeff = 0.6f;
+        for (int i = 0; i < 3; i++) {
+            color.raw[i] =
+                std::min(textureColor.raw[i] * ambientCoeff +
+                         diffuseColor.raw[i] * diffuseCoeff +
+                         specularColor.raw[i] * specularCoeff,
+                         255.0f);
+        }
 
         return false;
     }
