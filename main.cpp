@@ -29,14 +29,13 @@ Vec3f up(0, 1, 0);
 
 struct GouraudShader : public IShader {
     std::array<Vec2f, 3> textureVertices;
-    Matrix uniform_projModelview;
-    Matrix uniform_projModelviewIT;
-    Matrix uniform_viewportProjModelview;
+    Matrix uniform_M;
+    Matrix uniform_MIT;
 
     virtual Vec3f vertex(int faceIndex, int vertexIndex) {
         textureVertices[vertexIndex] = model->getTextureVertex(faceIndex, vertexIndex);
         Vec3f glVertex = model->getVertex(faceIndex, vertexIndex);
-        return uniform_viewportProjModelview * glVertex;
+        return viewport * projection * modelview * glVertex;
     }
 
     virtual bool fragment(const Vec3f &baryCoords, TGAColor &color) {
@@ -47,12 +46,9 @@ struct GouraudShader : public IShader {
 
         TGAColor textureColor = model->getTextureColor(texel);
 
-        // The actual "transpose" portion of the inverse transpose happens
-        // here, by representing the normal as a column (vector) instead of a
-        // row.
         Vec3f textureNormal = model->getTextureNormal(texel);
-        Vec3f transformedNormal = (uniform_projModelviewIT * textureNormal).normalized();
-        Vec3f transformedLightVec = (uniform_projModelview * lightVec).normalized();
+        Vec3f transformedNormal = (uniform_MIT * textureNormal).normalized();
+        Vec3f transformedLightVec = (uniform_M * lightVec).normalized();
         float diffuseIntensity = transformedNormal * transformedLightVec;
         assert(diffuseIntensity <= 1.0f);
         if (diffuseIntensity < 0.0f)
@@ -89,9 +85,13 @@ void lesson6()
     project(-1.0f / (eye-origin).magnitude());
 
     GouraudShader shader;
-    shader.uniform_projModelview = projection * modelview;
-    shader.uniform_projModelviewIT = (projection * modelview).inverse();
-    shader.uniform_viewportProjModelview = viewport * projection * modelview;
+    shader.uniform_M = projection * modelview;
+    // Note that the "transpose" portion of the inverse transpose happens
+    // implicitly when we perform the matrix multiplication on normals in the
+    // fragment shader.  This is because we represent each normal as a column
+    // vector, rather than a row as it appears in the IT equation.
+    shader.uniform_MIT = (projection * modelview).inverse();
+
 
     for (int faceIndex = 0; faceIndex < model->numFaces(); faceIndex++) {
         std::array<Vec3f, 3> screenCoords;
