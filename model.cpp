@@ -15,6 +15,8 @@ Model::Model(std::string path)
         assert(0);
     if (!loadNormalMap(path + "_nm.tga"))
         assert(0);
+    if (!loadTangentMap(path + "_nm_tangent.tga"))
+        assert(0);
     if (!loadSpecularMap(path + "_spec.tga"))
         assert(0);
 }
@@ -80,6 +82,13 @@ bool Model::loadNormalMap(std::string path)
         normalMap.flip_vertically();
 }
 
+bool Model::loadTangentMap(std::string path)
+{
+    return
+        tangentMap.read_tga_file(path.c_str()) &&
+        tangentMap.flip_vertically();
+}
+
 bool Model::loadSpecularMap(std::string path)
 {
     return
@@ -143,6 +152,21 @@ Vec3f Model::getTextureNormal(Vec2f uv)
                        (normalColor.b / 255.0f) * 2.0f - 1.0f);
 
     return vertexNormal;
+}
+
+Vec3f Model::getTangentNormal(Vec2f uv)
+{
+    assert(uv.u >= 0.0 && uv.u <= 1.0);
+    assert(uv.v >= 0.0 && uv.v <= 1.0);
+
+    Vec2i texel(uv.u * tangentMap.get_width(),
+                uv.v * tangentMap.get_height());
+    TGAColor tangentColor = tangentMap.get(texel.u, texel.y);
+    Vec3f tangentNormal((tangentColor.r / 255.0f) * 2.0f - 1.0f,
+                        (tangentColor.g / 255.0f) * 2.0f - 1.0f,
+                        (tangentColor.b / 255.0f) * 2.0f - 1.0f);
+
+    return tangentNormal;
 }
 
 float Model::getSpecularPower(Vec2f uv)

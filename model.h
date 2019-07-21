@@ -20,16 +20,19 @@ public:
 
     TGAImage diffuseMap;
     TGAImage normalMap;
+    TGAImage tangentMap;
     TGAImage specularMap;
 
     TGAColor getTextureColor(Vec2f uv);
     Vec3f getTextureNormal(Vec2f uv);
+    Vec3f getTangentNormal(Vec2f uv);
     float getSpecularPower(Vec2f uv);
 
 private:
     bool loadObj(std::string filename);
     bool loadDiffuseMap(std::string filename);
     bool loadNormalMap(std::string filename);
+    bool loadTangentMap(std::string filename);
     bool loadSpecularMap(std::string filename);
 
     std::vector<std::vector<int>> faces;
