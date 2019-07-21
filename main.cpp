@@ -29,11 +29,13 @@ Vec3f up(0, 1, 0);
 
 struct GouraudShader : public IShader {
     std::array<Vec2f, 3> textureVertices;
+    std::array<Vec3f, 3> vertexNormals;
     Matrix uniform_M;
     Matrix uniform_MIT;
 
     virtual Vec3f vertex(int faceIndex, int vertexIndex) {
         textureVertices[vertexIndex] = model->getTextureVertex(faceIndex, vertexIndex);
+        vertexNormals[vertexIndex] = uniform_MIT * model->getVertexNormal(faceIndex, vertexIndex);
         Vec3f glVertex = model->getVertex(faceIndex, vertexIndex);
         return viewport * projection * modelview * glVertex;
     }
@@ -43,8 +45,14 @@ struct GouraudShader : public IShader {
             textureVertices[0] * baryCoords.u +
             textureVertices[1] * baryCoords.v +
             textureVertices[2] * baryCoords.w;
-
         TGAColor textureColor = model->getTextureColor(texel);
+
+        Vec3f objectSpaceNormal =
+            (vertexNormals[0] * baryCoords.u +
+             vertexNormals[1] * baryCoords.v +
+             vertexNormals[2] * baryCoords.w)
+            .normalized();
+        Vec3f tangentSpaceNormal = model->getTangentNormal(texel);
 
         Vec3f textureNormal = model->getTextureNormal(texel);
         Vec3f transformedNormal = (uniform_MIT * textureNormal).normalized();
