@@ -22,8 +22,10 @@ constexpr int width = 800, height = 800, depth = 255;
 TGAImage output(width, height, TGAImage::RGB);
 std::vector<float> zBuffer(width * height, std::numeric_limits<float>::lowest());
 
-Vec3f origin(0, 0, 0);
 Vec3f lightVec = Vec3f(1, 1, 1).normalized();
+Vec3f transformedLightVec;
+
+Vec3f origin(0, 0, 0);
 Vec3f eye(1, 1, 3);
 Vec3f up(0, 1, 0);
 
@@ -32,8 +34,8 @@ struct GouraudShader : public IShader
     Matrix2x3 vertexUVs;
     Matrix3x3 vertexNormals;
     Matrix3x3 vertexCoords;
-    Matrix4x4 uniform_M;
-    Matrix4x4 uniform_MIT;
+    Matrix4x4 M;
+    Matrix4x4 MIT;
 
     virtual Vec3f vertex(int faceIndex, int vertexIndex) {
         // Fetch vertex data from the model.
@@ -41,11 +43,11 @@ struct GouraudShader : public IShader
         Vec3f normal = model->getVertexNormal(faceIndex, vertexIndex);
         Vec2f uv = model->getTextureVertex(faceIndex, vertexIndex);
 
-        // Transform the vertex and normal.
-        vertex = uniform_M * vertex;
-        normal = uniform_MIT * normal;
+        // Transform the vertex and normal to our perspective.
+        vertex = M * vertex;
+        normal = MIT * normal;
 
-        // Record data for the fragment shader.
+        // Record data needed by the fragment shader.
         vertexCoords.setCol(vertex, vertexIndex);
         vertexNormals.setCol(normal, vertexIndex);
         vertexUVs.setCol(uv, vertexIndex);
@@ -59,7 +61,6 @@ struct GouraudShader : public IShader
         TGAColor textureColor = model->getTextureColor(uv);
         Vec3f objectSpaceNormal = (vertexNormals * barycentricCoords).normalized();
         Vec3f tangentSpaceNormal = model->getTangentNormal(uv);
-        Vec3f transformedLightVec = (uniform_M * lightVec).normalized();
 
         Matrix3x3 A;
         A.setRow(vertexCoords.getCol(1) - vertexCoords.getCol(0), 0);
@@ -69,11 +70,11 @@ struct GouraudShader : public IShader
         Vec2f uv0 = vertexUVs.getCol(0);
         Vec2f uv1 = vertexUVs.getCol(1);
         Vec2f uv2 = vertexUVs.getCol(2);
-        Matrix3x3 tangentBasis;
         Vec3f i = (AI * Vec3f(uv1.u-uv0.u, uv2.u-uv0.u, 0));
         Vec3f j = (AI * Vec3f(uv1.v-uv0.v, uv2.v-uv0.v, 0));
-        tangentBasis.setCol(i, 0);
-        tangentBasis.setCol(j, 1);
+        Matrix3x3 tangentBasis;
+        tangentBasis.setCol(i.normalized(), 0);
+        tangentBasis.setCol(j.normalized(), 1);
         tangentBasis.setCol(objectSpaceNormal, 2);
         Vec3f normal = (tangentBasis * tangentSpaceNormal).normalized();
 
@@ -82,14 +83,6 @@ struct GouraudShader : public IShader
         if (diffuseIntensity < 0.0f)
             diffuseIntensity = 0.0f;
         TGAColor diffuseColor = textureColor * diffuseIntensity;
-
-        // Vec3f textureNormal = model->getTextureNormal(uv);
-        // Vec3f normal = (uniform_MIT * textureNormal).normalized();
-        // float diffuseIntensity = normal * transformedLightVec;
-        // assert(diffuseIntensity <= 1.0f);
-        // if (diffuseIntensity < 0.0f)
-        //     diffuseIntensity = 0.0f;
-        // TGAColor diffuseColor = textureColor * diffuseIntensity;
 
         float specularPower = model->getSpecularPower(uv);
         Vec3f reflection = (normal*2 - transformedLightVec).normalized();
@@ -122,12 +115,10 @@ int main(int argc, char** argv)
     project(-1.0f / (eye-origin).magnitude());
 
     GouraudShader shader;
-    shader.uniform_M = projection * modelview;
-    // Note that the "transpose" portion of the inverse transpose happens
-    // implicitly when we perform the matrix multiplication on normals in the
-    // fragment shader.  This is because we represent each normal as a column
-    // vector, rather than a row as it appears in the IT equation.
-    shader.uniform_MIT = (projection * modelview).inverse();
+    shader.M = projection * modelview;
+    shader.MIT = (projection * modelview).inverseTranspose();
+
+    transformedLightVec = (projection * modelview * lightVec).normalized();
 
     for (int faceIndex = 0; faceIndex < model->numFaces(); faceIndex++) {
         std::array<Vec3f, 3> screenCoords;
