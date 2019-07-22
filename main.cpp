@@ -27,43 +27,72 @@ Vec3f lightVec = Vec3f(1, 1, 1).normalized();
 Vec3f eye(1, 1, 3);
 Vec3f up(0, 1, 0);
 
-struct GouraudShader : public IShader {
-    Matrix2x3 textureVertices;
+struct GouraudShader : public IShader
+{
+    Matrix2x3 vertexUVs;
     Matrix3x3 vertexNormals;
+    Matrix3x3 vertexCoords;
     Matrix4x4 uniform_M;
     Matrix4x4 uniform_MIT;
 
     virtual Vec3f vertex(int faceIndex, int vertexIndex) {
-        Vec2f textureVertex = model->getTextureVertex(faceIndex, vertexIndex);
-        textureVertices.setCol(textureVertex, vertexIndex);
+        // Fetch vertex data from the model.
+        Vec3f vertex = model->getVertex(faceIndex, vertexIndex);
+        Vec3f normal = model->getVertexNormal(faceIndex, vertexIndex);
+        Vec2f uv = model->getTextureVertex(faceIndex, vertexIndex);
 
-        Vec3f vertexNormal = model->getVertexNormal(faceIndex, vertexIndex);
-        vertexNormals.setCol(uniform_MIT * vertexNormal, vertexIndex);
+        // Transform the vertex and normal.
+        vertex = uniform_M * vertex;
+        normal = uniform_MIT * normal;
 
-        Vec3f glVertex = model->getVertex(faceIndex, vertexIndex);
-        return viewport * projection * modelview * glVertex;
+        // Record data for the fragment shader.
+        vertexCoords.setCol(vertex, vertexIndex);
+        vertexNormals.setCol(normal, vertexIndex);
+        vertexUVs.setCol(uv, vertexIndex);
+
+        // Return the position on the display where the vertex projects.
+        return viewport * vertex;
     }
 
-    virtual bool fragment(const Vec3f &baryCoords, TGAColor &color) {
-        Vec2f texel = textureVertices * baryCoords;
-
-        TGAColor textureColor = model->getTextureColor(texel);
-
-        Vec3f objectSpaceNormal = (vertexNormals * baryCoords).normalized();
-
-        Vec3f tangentSpaceNormal = model->getTangentNormal(texel);
-
-        Vec3f textureNormal = model->getTextureNormal(texel);
-        Vec3f transformedNormal = (uniform_MIT * textureNormal).normalized();
+    virtual bool fragment(const Vec3f &barycentricCoords, TGAColor &color) {
+        Vec2f uv = vertexUVs * barycentricCoords;
+        TGAColor textureColor = model->getTextureColor(uv);
+        Vec3f objectSpaceNormal = (vertexNormals * barycentricCoords).normalized();
+        Vec3f tangentSpaceNormal = model->getTangentNormal(uv);
         Vec3f transformedLightVec = (uniform_M * lightVec).normalized();
-        float diffuseIntensity = transformedNormal * transformedLightVec;
+
+        Matrix3x3 A;
+        A.setRow(vertexCoords.getCol(1) - vertexCoords.getCol(0), 0);
+        A.setRow(vertexCoords.getCol(2) - vertexCoords.getCol(0), 1);
+        A.setRow(objectSpaceNormal, 2);
+        Matrix3x3 AI = A.inverse();
+        Vec2f uv0 = vertexUVs.getCol(0);
+        Vec2f uv1 = vertexUVs.getCol(1);
+        Vec2f uv2 = vertexUVs.getCol(2);
+        Matrix3x3 tangentBasis;
+        Vec3f i = (AI * Vec3f(uv1.u-uv0.u, uv2.u-uv0.u, 0));
+        Vec3f j = (AI * Vec3f(uv1.v-uv0.v, uv2.v-uv0.v, 0));
+        tangentBasis.setCol(i, 0);
+        tangentBasis.setCol(j, 1);
+        tangentBasis.setCol(objectSpaceNormal, 2);
+        Vec3f normal = (tangentBasis * tangentSpaceNormal).normalized();
+
+        float diffuseIntensity = normal * transformedLightVec;
         assert(diffuseIntensity <= 1.0f);
         if (diffuseIntensity < 0.0f)
             diffuseIntensity = 0.0f;
         TGAColor diffuseColor = textureColor * diffuseIntensity;
 
-        float specularPower = model->getSpecularPower(texel);
-        Vec3f reflection = (transformedNormal*2 - transformedLightVec).normalized();
+        // Vec3f textureNormal = model->getTextureNormal(uv);
+        // Vec3f normal = (uniform_MIT * textureNormal).normalized();
+        // float diffuseIntensity = normal * transformedLightVec;
+        // assert(diffuseIntensity <= 1.0f);
+        // if (diffuseIntensity < 0.0f)
+        //     diffuseIntensity = 0.0f;
+        // TGAColor diffuseColor = textureColor * diffuseIntensity;
+
+        float specularPower = model->getSpecularPower(uv);
+        Vec3f reflection = (normal*2 - transformedLightVec).normalized();
         float specularIntensity = std::pow(std::max(reflection.z, 0.0f), specularPower);
         assert(specularIntensity <= 1.0f);
         if (specularIntensity < 0.0f)
@@ -81,11 +110,12 @@ struct GouraudShader : public IShader {
                          255.0f);
         }
 
+        // Specify not to discard this fragment.
         return false;
     }
 };
 
-void lesson6()
+int main(int argc, char** argv)
 {
     lookAt(eye, origin, up);
     view(0, 0, width, height);
@@ -111,10 +141,6 @@ void lesson6()
 
     output.flip_vertically();
     output.write_tga_file("output.tga");
-}
 
-int main(int argc, char** argv)
-{
-    lesson6();
     return 0;
 }

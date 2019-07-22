@@ -106,6 +106,162 @@ void clampVec3(Vec3<T> &v, const Vec3<T> &low, const Vec3<T> &high)
 struct Matrix4x4;
 struct Matrix3x3;
 struct Matrix2x3;
+struct Matrix2x2;
+
+struct Matrix2x2
+{
+    std::array<std::array<float, 2>, 2> m;
+
+    Matrix2x2() : m{0} { }
+
+    inline std::array<float, 2>& operator [] (const int row) { return m[row]; }
+};
+
+struct Matrix2x3
+{
+    std::array<std::array<float, 3>, 2> m;
+
+    Matrix2x3() : m{0} { }
+
+    inline void setCol(const Vec2f& v, int columnIndex) {
+        assert(columnIndex >= 0 && columnIndex <= 3);
+        m[0][columnIndex] = v.x;
+        m[1][columnIndex] = v.y;
+    }
+
+    inline void setRow(const Vec3f& v, int rowIndex) {
+        assert(rowIndex >= 0 && rowIndex <= 2);
+        m[rowIndex][0] = v.x;
+        m[rowIndex][1] = v.y;
+        m[rowIndex][1] = v.z;
+    }
+
+    inline Vec2f getCol(int columnIndex) {
+        assert(columnIndex >= 0 && columnIndex <= 3);
+        return Vec2f(m[0][columnIndex], m[1][columnIndex]);
+    }
+
+    inline std::array<float, 3>& operator [] (const int row) { return m[row]; }
+
+    inline Vec2f operator *(const Vec3f &v) const {
+        Vec2f result = { v.x*m[0][0] + v.y*m[0][1] + v.z*m[0][2],
+                         v.x*m[1][0] + v.y*m[1][1] + v.z*m[1][2] };
+        return result;
+    }
+
+    inline Matrix2x3 operator *(const float &scalar) const {
+        Matrix2x3 result;
+        for (int row = 0; row < 2; row++) {
+            for (int col = 0; col < 3; col++) {
+                result.m[row][col] = m[row][col] * scalar;
+            }
+        }
+        return result;
+    }
+};
+
+struct Matrix3x3
+{
+    std::array<std::array<float, 3>, 3> m;
+
+    Matrix3x3() : m{{{1,0,0},
+                     {0,1,0},
+                     {0,0,1}}} { }
+
+    inline void setCol(const Vec3f& v, int columnIndex) {
+        assert(columnIndex >= 0 && columnIndex <= 3);
+        m[0][columnIndex] = v.x;
+        m[1][columnIndex] = v.y;
+        m[2][columnIndex] = v.z;
+    }
+
+    inline void setRow(const Vec3f& v, int rowIndex) {
+        assert(rowIndex >= 0 && rowIndex <= 3);
+        m[rowIndex][0] = v.x;
+        m[rowIndex][1] = v.y;
+        m[rowIndex][2] = v.z;
+    }
+
+    inline Vec3f getCol(int columnIndex) {
+        assert(columnIndex >= 0 && columnIndex <= 3);
+        return Vec3f(m[0][columnIndex], m[1][columnIndex], m[2][columnIndex]);
+    }
+
+    inline std::array<float, 3>& operator [] (const int row) { return m[row]; }
+
+    inline Vec3f operator *(const Vec3f &v) const {
+        Vec3f result = { v.x*m[0][0] + v.y*m[0][1] + v.z*m[0][2],
+                         v.x*m[1][0] + v.y*m[1][1] + v.z*m[1][2],
+                         v.x*m[2][0] + v.y*m[2][1] + v.z*m[2][2] };
+        return result;
+    }
+
+    inline Matrix3x3 operator *(const Matrix3x3 &rhs) const {
+        Matrix3x3 result;
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 3; col++) {
+                result.m[row][col] = 0.0f;
+                for (int i = 0; i < 3; i++) {
+                    result.m[row][col] += m[row][i] * rhs.m[i][col];
+                }
+            }
+        }
+        return result;
+    }
+
+    inline Matrix3x3 operator *(const float &scalar) const {
+        Matrix3x3 result;
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 3; col++) {
+                result.m[row][col] = m[row][col] * scalar;
+            }
+        }
+        return result;
+    }
+
+    inline float determinant() {
+        return
+            m[0][0] * (m[1][1] * m[2][2] - m[2][1] * m[1][2]) -
+            m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+            m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+    }
+
+    inline Matrix2x2 minor(int row, int col) {
+        Matrix2x2 result;
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 2; j++) {
+                result[i][j] = m[i<row ? i : i+1][j<col ? j : j+1];
+            }
+        }
+        return result;
+    }
+
+    inline float cofactor(int row, int col) {
+        Matrix2x2 min = minor(row, col);
+
+        float ad = min[0][0]*min[1][1];
+        float bc = min[1][0]*min[0][1];
+        float det = ad-bc;
+
+        return det * ((row + col) % 2 ? -1 : 1);
+    }
+
+    inline Matrix3x3 adjugate() {
+        Matrix3x3 result;
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 3; col++) {
+                result[row][col] = cofactor(row, col);
+            }
+        }
+        return result;
+    }
+
+    inline Matrix3x3 inverse() {
+        float det = determinant();
+        assert(det != 0.0f);
+        return adjugate() * (1 / det);
+    }
+};
 
 struct Matrix4x4
 {
@@ -164,8 +320,8 @@ struct Matrix4x4
             m[0][1]*m[1][0]*m[2][2]*m[3][3] + m[0][0]*m[1][1]*m[2][2]*m[3][3];
     }
 
-    inline Matrix4x4 minor(int row, int col) {
-        Matrix4x4 result;
+    inline Matrix3x3 minor(int row, int col) {
+        Matrix3x3 result;
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
                 result[i][j] = m[i<row ? i : i+1][j<col ? j : j+1];
@@ -175,14 +331,14 @@ struct Matrix4x4
     }
 
     inline float cofactor(int row, int col) {
-        Matrix4x4 min = minor(row, col);
+        Matrix3x3 min = minor(row, col);
 
-        double aei = min[0][0]*min[1][1]*min[2][2];
-	double afh = min[0][0]*min[1][2]*min[2][1];
-	double bfg = min[0][1]*min[1][2]*min[2][0];
-	double bdi = min[0][1]*min[1][0]*min[2][2];
-	double cdh = min[0][2]*min[1][0]*min[2][1];
-	double ceg = min[0][2]*min[1][1]*min[2][0];
+        float aei = min[0][0]*min[1][1]*min[2][2];
+	float afh = min[0][0]*min[1][2]*min[2][1];
+	float bfg = min[0][1]*min[1][2]*min[2][0];
+	float bdi = min[0][1]*min[1][0]*min[2][2];
+	float cdh = min[0][2]*min[1][0]*min[2][1];
+	float ceg = min[0][2]*min[1][1]*min[2][0];
 	float det = (aei - afh) + (bfg - bdi) + (cdh - ceg);
 
         return det * ((row + col) % 2 ? -1 : 1);
@@ -202,96 +358,6 @@ struct Matrix4x4
         float det = determinant();
         assert(det != 0.0f);
         return adjugate() * (1 / det);
-    }
-};
-
-struct Matrix3x3
-{
-    std::array<std::array<float, 3>, 3> m;
-
-    Matrix3x3() : m{{{1,0,0},
-                     {0,1,0},
-                     {0,0,1}}} { }
-
-    Matrix3x3(Vec3f col0, Vec3f col1, Vec3f col2) : m{
-        {{col0.x, col1.x, col2.x},
-         {col0.y, col1.y, col2.y},
-         {col0.z, col1.z, col2.z}}
-    } { }
-
-    inline void setCol(Vec3f v, int columnIndex) {
-        assert(columnIndex >= 0 && columnIndex <= 3);
-        m[0][columnIndex] = v.x;
-        m[1][columnIndex] = v.y;
-        m[2][columnIndex] = v.z;
-    }
-
-    inline std::array<float, 3>& operator [] (const int row) { return m[row]; }
-
-    inline Vec3f operator *(const Vec3f &v) const {
-        Vec3f result = { v.x*m[0][0] + v.y*m[0][1] + v.z*m[0][2],
-                         v.x*m[1][0] + v.y*m[1][1] + v.z*m[1][2],
-                         v.x*m[2][0] + v.y*m[2][1] + v.z*m[2][2] };
-        return result;
-    }
-
-    inline Matrix3x3 operator *(const Matrix3x3 &rhs) const {
-        Matrix3x3 result;
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 3; col++) {
-                result.m[row][col] = 0.0f;
-                for (int i = 0; i < 3; i++) {
-                    result.m[row][col] += m[row][i] * rhs.m[i][col];
-                }
-            }
-        }
-        return result;
-    }
-
-    inline Matrix3x3 operator *(const float &scalar) const {
-        Matrix3x3 result;
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 3; col++) {
-                result.m[row][col] = m[row][col] * scalar;
-            }
-        }
-        return result;
-    }
-};
-
-struct Matrix2x3
-{
-    std::array<std::array<float, 3>, 2> m;
-
-    Matrix2x3() : m{0} { }
-
-    Matrix2x3(Vec2f col0, Vec2f col1, Vec2f col2) : m{
-        { { col0.x, col1.x, col2.x },
-          { col0.y, col1.y, col2.y } }
-    } { }
-
-    inline void setCol(Vec2f v, int columnIndex) {
-        assert(columnIndex >= 0 && columnIndex <= 3);
-        m[0][columnIndex] = v.x;
-        m[1][columnIndex] = v.y;
-    }
-
-    inline std::array<float, 3>& operator [] (const int row) { return m[row]; }
-
-    inline Vec2f operator *(const Vec3f &v) const {
-        Vec2f result = { v.x*m[0][0] + v.y*m[0][1] + v.z*m[0][2],
-                         v.x*m[1][0] + v.y*m[1][1] + v.z*m[1][2] };
-        return result;
-    }
-
-    inline Matrix2x3 operator *(const float &scalar) const {
-        Matrix2x3 result;
-        for (int row = 0; row < 2; row++) {
-            for (int col = 0; col < 3; col++) {
-                result.m[row][col] = m[row][col] * scalar;
-            }
-        }
-        return result;
     }
 };
 
