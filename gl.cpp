@@ -5,9 +5,9 @@
 #include "geometry.h"
 #include "gl.h"
 
-Matrix4x4 viewport;
-Matrix4x4 projection;
-Matrix4x4 modelview;
+Matrix4x4 viewport = Matrix4x4::identity();
+Matrix4x4 projection = Matrix4x4::identity();
+Matrix4x4 modelview = Matrix4x4::identity();
 
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor black = TGAColor(  0,   0,   0, 255);
@@ -33,7 +33,7 @@ void project(const float coeff)
 
 static Matrix4x4 translate(const float xOffset, const float yOffset, const float zOffset)
 {
-    Matrix4x4 result;
+    Matrix4x4 result = Matrix4x4::identity();
     result[0][3] = xOffset;
     result[1][3] = yOffset;
     result[2][3] = zOffset;
@@ -42,7 +42,7 @@ static Matrix4x4 translate(const float xOffset, const float yOffset, const float
 
 static Matrix4x4 scale(const float xFactor, const float yFactor, const float zFactor)
 {
-    Matrix4x4 result;
+    Matrix4x4 result = Matrix4x4::identity();
     result[0][0] = xFactor;
     result[1][1] = yFactor;
     result[2][2] = zFactor;
@@ -51,7 +51,7 @@ static Matrix4x4 scale(const float xFactor, const float yFactor, const float zFa
 
 static Matrix4x4 basis(const Vec3f &col0, const Vec3f &col1, const Vec3f &col2)
 {
-    Matrix4x4 result;
+    Matrix4x4 result = Matrix4x4::identity();
     for (int i = 0; i < 3; i++) {
         result[0][i] = col0.raw[i];
         result[1][i] = col1.raw[i];

@@ -112,7 +112,15 @@ struct Matrix2x2
 {
     std::array<std::array<float, 2>, 2> m;
 
-    Matrix2x2() : m{0} { }
+    static Matrix2x2 identity() {
+        Matrix2x2 result;
+        for (int row = 0; row < 2; row++) {
+            for (int col = 0; col < 2; col++) {
+                result[row][col] = float(row == col);
+            }
+        }
+        return result;
+    }
 
     inline std::array<float, 2>& operator [] (int row) { return m[row]; }
 };
@@ -164,9 +172,15 @@ struct Matrix3x3
 {
     std::array<std::array<float, 3>, 3> m;
 
-    Matrix3x3() : m{{{1,0,0},
-                     {0,1,0},
-                     {0,0,1}}} { }
+    static Matrix3x3 identity() {
+        Matrix3x3 result;
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 3; col++) {
+                result[row][col] = float(row == col);
+            }
+        }
+        return result;
+    }
 
     inline void setCol(const Vec3f& v, int columnIndex) {
         assert(columnIndex >= 0 && columnIndex <= 3);
@@ -281,10 +295,15 @@ struct Matrix4x4
 {
     std::array<std::array<float, 4>, 4> m;
 
-    Matrix4x4() : m{{{1,0,0,0},
-                     {0,1,0,0},
-                     {0,0,1,0},
-                     {0,0,0,1}}} { }
+    static Matrix4x4 identity() {
+        Matrix4x4 result;
+        for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 4; col++) {
+                result[row][col] = float(row == col);
+            }
+        }
+        return result;
+    }
 
     inline std::array<float, 4>& operator [] (int row) { return m[row]; }
 
