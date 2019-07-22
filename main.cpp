@@ -28,30 +28,29 @@ Vec3f eye(1, 1, 3);
 Vec3f up(0, 1, 0);
 
 struct GouraudShader : public IShader {
-    std::array<Vec2f, 3> textureVertices;
-    std::array<Vec3f, 3> vertexNormals;
-    Matrix uniform_M;
-    Matrix uniform_MIT;
+    Matrix2x3 textureVertices;
+    Matrix3x3 vertexNormals;
+    Matrix4x4 uniform_M;
+    Matrix4x4 uniform_MIT;
 
     virtual Vec3f vertex(int faceIndex, int vertexIndex) {
-        textureVertices[vertexIndex] = model->getTextureVertex(faceIndex, vertexIndex);
-        vertexNormals[vertexIndex] = uniform_MIT * model->getVertexNormal(faceIndex, vertexIndex);
+        Vec2f textureVertex = model->getTextureVertex(faceIndex, vertexIndex);
+        textureVertices.setCol(textureVertex, vertexIndex);
+
+        Vec3f vertexNormal = model->getVertexNormal(faceIndex, vertexIndex);
+        vertexNormals.setCol(uniform_MIT * vertexNormal, vertexIndex);
+
         Vec3f glVertex = model->getVertex(faceIndex, vertexIndex);
         return viewport * projection * modelview * glVertex;
     }
 
     virtual bool fragment(const Vec3f &baryCoords, TGAColor &color) {
-        Vec2f texel =
-            textureVertices[0] * baryCoords.u +
-            textureVertices[1] * baryCoords.v +
-            textureVertices[2] * baryCoords.w;
+        Vec2f texel = textureVertices * baryCoords;
+
         TGAColor textureColor = model->getTextureColor(texel);
 
-        Vec3f objectSpaceNormal =
-            (vertexNormals[0] * baryCoords.u +
-             vertexNormals[1] * baryCoords.v +
-             vertexNormals[2] * baryCoords.w)
-            .normalized();
+        Vec3f objectSpaceNormal = (vertexNormals * baryCoords).normalized();
+
         Vec3f tangentSpaceNormal = model->getTangentNormal(texel);
 
         Vec3f textureNormal = model->getTextureNormal(texel);
@@ -99,7 +98,6 @@ void lesson6()
     // fragment shader.  This is because we represent each normal as a column
     // vector, rather than a row as it appears in the IT equation.
     shader.uniform_MIT = (projection * modelview).inverse();
-
 
     for (int faceIndex = 0; faceIndex < model->numFaces(); faceIndex++) {
         std::array<Vec3f, 3> screenCoords;

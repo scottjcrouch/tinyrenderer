@@ -5,9 +5,9 @@
 #include "geometry.h"
 #include "gl.h"
 
-Matrix viewport;
-Matrix projection;
-Matrix modelview;
+Matrix4x4 viewport;
+Matrix4x4 projection;
+Matrix4x4 modelview;
 
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor black = TGAColor(  0,   0,   0, 255);
@@ -31,27 +31,27 @@ void project(const float coeff)
     projection[3][2] = coeff;
 }
 
-static Matrix translate(const float xOffset, const float yOffset, const float zOffset)
+static Matrix4x4 translate(const float xOffset, const float yOffset, const float zOffset)
 {
-    Matrix result;
+    Matrix4x4 result;
     result[0][3] = xOffset;
     result[1][3] = yOffset;
     result[2][3] = zOffset;
     return result;
 }
 
-static Matrix scale(const float xFactor, const float yFactor, const float zFactor)
+static Matrix4x4 scale(const float xFactor, const float yFactor, const float zFactor)
 {
-    Matrix result;
+    Matrix4x4 result;
     result[0][0] = xFactor;
     result[1][1] = yFactor;
     result[2][2] = zFactor;
     return result;
 }
 
-static Matrix basis(const Vec3f &col0, const Vec3f &col1, const Vec3f &col2)
+static Matrix4x4 basis(const Vec3f &col0, const Vec3f &col1, const Vec3f &col2)
 {
-    Matrix result;
+    Matrix4x4 result;
     for (int i = 0; i < 3; i++) {
         result[0][i] = col0.raw[i];
         result[1][i] = col1.raw[i];
@@ -66,8 +66,8 @@ void lookAt(Vec3f eye, Vec3f point, Vec3f up)
     assert((up ^ zPrime) != Vec3f(0,0,0)); // up and gaze direction can't be parallel
     Vec3f xPrime = (up ^ zPrime).normalized();
     Vec3f yPrime = (zPrime ^ xPrime).normalized();
-    Matrix translatePointToOrigin = translate(-point.x, -point.y, -point.z);
-    Matrix inverseAxesTransform = basis(xPrime, yPrime, zPrime);
+    Matrix4x4 translatePointToOrigin = translate(-point.x, -point.y, -point.z);
+    Matrix4x4 inverseAxesTransform = basis(xPrime, yPrime, zPrime);
     modelview = inverseAxesTransform * translatePointToOrigin;
 }
 
