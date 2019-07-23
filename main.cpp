@@ -108,15 +108,35 @@ struct PhongShader : public IShader
     }
 };
 
+struct DepthShader : public IShader
+{
+    Matrix3x3 vertexCoords;
+
+    virtual Vec3f vertex(int faceIndex, int vertexIndex) {
+        Vec3f vertex = model->getVertex(faceIndex, vertexIndex);
+        vertex = viewport * projection * modelview * vertex;
+        vertexCoords.setCol(vertex, vertexIndex);
+        return vertex;
+    }
+
+    virtual bool fragment(const Vec3f& barycentricCoords, TGAColor &color) {
+        Vec3f p = vertexCoords * barycentricCoords;
+        color = TGAColor(255, 255, 255) * (p.z / depth);
+        return false;
+    }
+};
+
 int main(int argc, char** argv)
 {
     lookAt(eye, origin, up);
     view(0, 0, width, height);
     project(-1.0f / (eye-origin).magnitude());
 
-    PhongShader shader;
-    shader.M = projection * modelview;
-    shader.MIT = (projection * modelview).inverseTranspose();
+    // PhongShader shader;
+    // shader.M = projection * modelview;
+    // shader.MIT = (projection * modelview).inverseTranspose();
+
+    DepthShader shader;
 
     transformedLightVec = (projection * modelview * lightVec).normalized();
 
