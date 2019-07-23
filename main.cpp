@@ -21,6 +21,7 @@ auto model(std::make_unique<Model>("obj/african_head"));
 constexpr int width = 800, height = 800, depth = 255;
 TGAImage output(width, height, TGAImage::RGB);
 std::vector<float> zBuffer(width * height, std::numeric_limits<float>::lowest());
+std::vector<float> shadowBuffer(width * height, std::numeric_limits<float>::lowest());
 
 Vec3f lightVec = Vec3f(1, 1, 1).normalized();
 Vec3f transformedLightVec;
@@ -128,15 +129,33 @@ struct DepthShader : public IShader
 
 int main(int argc, char** argv)
 {
+    {
+        TGAImage depth(width, height, TGAImage::RGB);
+        lookAt(lightVec, origin, up); // put camera at light source position
+        view(0, 0, width, height);
+        project(0); // infinite focal length (i.e. orthogonal projection)
+
+        DepthShader depthShader;
+        for (int faceIndex = 0; faceIndex < model->numFaces(); faceIndex++) {
+            std::array<Vec3f, 3> screenCoords;
+
+            for (int vertexIndex = 0; vertexIndex < 3; vertexIndex++) {
+                screenCoords[vertexIndex] = depthShader.vertex(faceIndex, vertexIndex);
+            }
+
+            drawTriangle(screenCoords, depthShader, depth, shadowBuffer);
+        }
+        depth.flip_vertically();
+        depth.write_tga_file("depth.tga");
+    }
+
     lookAt(eye, origin, up);
     view(0, 0, width, height);
     project(-1.0f / (eye-origin).magnitude());
 
-    // PhongShader shader;
-    // shader.M = projection * modelview;
-    // shader.MIT = (projection * modelview).inverseTranspose();
-
-    DepthShader shader;
+    PhongShader shader;
+    shader.M = projection * modelview;
+    shader.MIT = (projection * modelview).inverseTranspose();
 
     transformedLightVec = (projection * modelview * lightVec).normalized();
 
