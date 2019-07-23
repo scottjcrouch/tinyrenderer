@@ -65,10 +65,56 @@ struct Vec3
     Vec3<float> normalized() const { return (*this) * float(1.0 / magnitude()); }
 };
 
+template <typename T>
+struct Vec4
+{
+    union {
+        struct { T a, b, c, d; };
+        T raw[4];
+    };
+
+    Vec4() : a(0), b(0), c(0), d(0) { }
+    Vec4(T _a, T _b, T _c, T _d) : a(_a), b(_b), c(_c), d(_d) { }
+    Vec4(Vec3<T> v, int _d) : a(v.x), b(v.y), c(v.z), d(_d) { }
+
+    inline bool operator ==(const Vec4<T> &v) const {
+        return a==v.a && b==v.b && c==v.c && d==v.d;
+    }
+    inline bool operator !=(const Vec4<T> &v) const {
+        return !(*this == v);
+    }
+    inline Vec4<T> operator +(const Vec4<T> &v) const {
+        return { a+v.a, b+v.b, c+v.c, d+v.d };
+    }
+    inline Vec4<T> operator -(const Vec4<T> &v) const {
+        return { a-v.a, b-v.b, c-v.c, d-v.d };
+    }
+    inline Vec4<T> operator -() const {
+        return { -a, -b, -c, -d };
+    }
+    inline Vec4<T> operator *(int scalar) const {
+        return { scalar*a, scalar*b, scalar*c, scalar*d };
+    }
+    inline Vec4<float> operator *(float scalar) const {
+        return { scalar*a, scalar*b, scalar*c, scalar*d };
+    }
+    inline T operator *(const Vec4<T> &v) const {
+        return a*v.a + b*v.b + c*v.c + d*v.d;
+    }
+
+    float magnitude() const { return std::sqrt(a*a + b*b + c*c + d*d); }
+    Vec4<float> normalized() const { return (*this) * float(1.0 / magnitude()); }
+    Vec3<float> homogenized() const {
+        return Vec3<float>(a/d, b/d, c/d);
+    }
+};
+
 using Vec2f = Vec2<float>;
 using Vec2i = Vec2<int>;
 using Vec3f = Vec3<float>;
 using Vec3i = Vec3<int>;
+using Vec4f = Vec4<float>;
+using Vec4i = Vec4<int>;
 
 template <typename T>
 Vec3f barycentricCoords(T ab, T ac, T ap)
@@ -312,6 +358,14 @@ struct Matrix4x4
                          v.x*m[1][0] + v.y*m[1][1] + v.z*m[1][2] + m[1][3],
                          v.x*m[2][0] + v.y*m[2][1] + v.z*m[2][2] + m[2][3] };
         return result * (1.0f / (v.x*m[3][0] + v.y*m[3][1] + v.z*m[3][2] + m[3][3]));
+    }
+
+    inline Vec4f operator *(const Vec4f &v) const {
+        Vec4f result = { v.a*m[0][0] + v.b*m[0][1] + v.c*m[0][2] + v.d*m[0][3],
+                         v.a*m[1][0] + v.b*m[1][1] + v.c*m[1][2] + v.d*m[1][3],
+                         v.a*m[2][0] + v.b*m[2][1] + v.c*m[2][2] + v.d*m[2][3],
+                         v.a*m[3][0] + v.b*m[3][1] + v.c*m[3][2] + v.d*m[3][3]};
+        return result;
     }
 
     inline Matrix4x4 operator *(const Matrix4x4 &rhs) const {
