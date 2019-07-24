@@ -19,7 +19,7 @@ const TGAColor blue  = TGAColor(  0,   0, 255, 255);
 auto model(std::make_unique<Model>("obj/african_head"));
 
 constexpr int width = 800, height = 800, depth = 255;
-TGAImage output(width, height, TGAImage::RGB);
+TGAImage outputImage(width, height, TGAImage::RGB);
 std::vector<float> zBuffer(width * height, std::numeric_limits<float>::lowest());
 std::vector<float> shadowBuffer(width * height, std::numeric_limits<float>::lowest());
 
@@ -37,6 +37,7 @@ struct PhongShader : public IShader
     Matrix3x3 vertexCoords;
     Matrix4x4 M;
     Matrix4x4 MIT;
+    Matrix4x4 Mshadow;
 
     virtual Vec3f vertex(int faceIndex, int vertexIndex) {
         // Fetch vertex data from the model.
@@ -62,6 +63,14 @@ struct PhongShader : public IShader
         TGAColor textureColor = model->getTextureColor(uv);
         Vec3f objectSpaceNormal = (vertexNormals * barycentricCoords).normalized();
         Vec3f tangentSpaceNormal = model->getTangentNormal(uv);
+
+        // Get coordinates of corresponding fragment in the shadow buffer.
+        Vec3f shadowBufCoord = Mshadow * (vertexCoords * barycentricCoords);
+        // Get the index into the actual array.
+        int idx = int(shadowBufCoord.x) + int(shadowBufCoord.y)*width;
+        // Compute a coefficient to indicate being in shade or not.
+        constexpr float zFightingMagicNum = 1.0;
+        float shadow = 0.3f + 0.7f*(shadowBuffer[idx] < shadowBufCoord.z + zFightingMagicNum);
 
         Matrix3x3 A;
         A.setRow(vertexCoords.getCol(1) - vertexCoords.getCol(0), 0);
@@ -99,8 +108,8 @@ struct PhongShader : public IShader
         for (int i = 0; i < 3; i++) {
             color.raw[i] =
                 std::min(textureColor.raw[i] * ambientCoeff +
-                         diffuseColor.raw[i] * diffuseCoeff +
-                         specularColor.raw[i] * specularCoeff,
+                         shadow*(diffuseColor.raw[i] * diffuseCoeff +
+                                 specularColor.raw[i] * specularCoeff),
                          255.0f);
         }
 
@@ -112,10 +121,11 @@ struct PhongShader : public IShader
 struct DepthShader : public IShader
 {
     Matrix3x3 vertexCoords;
+    Matrix4x4 M;
 
     virtual Vec3f vertex(int faceIndex, int vertexIndex) {
         Vec3f vertex = model->getVertex(faceIndex, vertexIndex);
-        vertex = viewport * projection * modelview * vertex;
+        vertex = M * vertex;
         vertexCoords.setCol(vertex, vertexIndex);
         return vertex;
     }
@@ -129,25 +139,26 @@ struct DepthShader : public IShader
 
 int main(int argc, char** argv)
 {
-    {
-        TGAImage depth(width, height, TGAImage::RGB);
-        lookAt(lightVec, origin, up); // put camera at light source position
-        view(0, 0, width, height);
-        project(0); // infinite focal length (i.e. orthogonal projection)
+    lookAt(lightVec, origin, up); // Put camera at position of light source.
+    view(0, 0, width, height);
+    project(0); // Set infinite focal length (orthogonal projection)
 
-        DepthShader depthShader;
-        for (int faceIndex = 0; faceIndex < model->numFaces(); faceIndex++) {
-            std::array<Vec3f, 3> screenCoords;
+    DepthShader depthShader;
+    depthShader.M = viewport * projection * modelview;
 
-            for (int vertexIndex = 0; vertexIndex < 3; vertexIndex++) {
-                screenCoords[vertexIndex] = depthShader.vertex(faceIndex, vertexIndex);
-            }
+    for (int faceIndex = 0; faceIndex < model->numFaces(); faceIndex++) {
+        std::array<Vec3f, 3> screenCoords;
 
-            drawTriangle(screenCoords, depthShader, depth, shadowBuffer);
+        for (int vertexIndex = 0; vertexIndex < 3; vertexIndex++) {
+            screenCoords[vertexIndex] = depthShader.vertex(faceIndex, vertexIndex);
         }
-        depth.flip_vertically();
-        depth.write_tga_file("depth.tga");
+
+        drawTriangle(screenCoords, depthShader, outputImage, shadowBuffer);
     }
+
+    outputImage.flip_vertically();
+    outputImage.write_tga_file("depth.tga");
+    outputImage.clear();
 
     lookAt(eye, origin, up);
     view(0, 0, width, height);
@@ -156,6 +167,7 @@ int main(int argc, char** argv)
     PhongShader shader;
     shader.M = projection * modelview;
     shader.MIT = (projection * modelview).inverseTranspose();
+    shader.Mshadow = depthShader.M * shader.M.inverse();
 
     transformedLightVec = (projection * modelview * lightVec).normalized();
 
@@ -166,11 +178,12 @@ int main(int argc, char** argv)
             screenCoords[vertexIndex] = shader.vertex(faceIndex, vertexIndex);
         }
 
-        drawTriangle(screenCoords, shader, output, zBuffer);
+        drawTriangle(screenCoords, shader, outputImage, zBuffer);
     }
 
-    output.flip_vertically();
-    output.write_tga_file("output.tga");
+    outputImage.flip_vertically();
+    outputImage.write_tga_file("output.tga");
+    outputImage.clear();
 
     return 0;
 }
