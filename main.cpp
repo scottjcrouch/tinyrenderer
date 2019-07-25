@@ -16,7 +16,8 @@ const TGAColor red   = TGAColor(255,   0,   0, 255);
 const TGAColor green = TGAColor(  0, 255,   0, 255);
 const TGAColor blue  = TGAColor(  0,   0, 255, 255);
 
-auto model(std::make_unique<Model>("obj/african_head"));
+// auto model(std::make_unique<Model>("obj/african_head"));
+auto model(std::make_unique<Model>("obj/diablo3_pose"));
 
 constexpr int width = 800, height = 800, depth = 255;
 TGAImage outputImage(width, height, TGAImage::RGB);
@@ -69,7 +70,7 @@ struct PhongShader : public IShader
         // Get the index into the actual array.
         int idx = int(shadowBufCoord.x) + int(shadowBufCoord.y)*width;
         // Compute a coefficient to indicate being in shade or not.
-        constexpr float zFightingMagicNum = 1.0;
+        constexpr float zFightingMagicNum = 43.34;
         float shadow = 0.3f + 0.7f*(shadowBuffer[idx] < shadowBufCoord.z + zFightingMagicNum);
 
         Matrix3x3 A;
@@ -140,7 +141,7 @@ struct DepthShader : public IShader
 int main(int argc, char** argv)
 {
     lookAt(lightVec, origin, up); // Put camera at position of light source.
-    view(0, 0, width, height);
+    view(width/8, height/8, width*3/4, height*3/4);
     project(0); // Set infinite focal length (orthogonal projection)
 
     DepthShader depthShader;
