@@ -111,14 +111,16 @@ void drawTriangle(const std::array<Vec3f, 3> &vertices,
                 continue;
             }
             p.z = a.z*bary.u + b.z*bary.v + c.z*bary.w;
-            if (zBuffer[int(p.y*width + p.x)] >= p.z) {
+            Vec3i pInt(p.x, p.y, p.z);
+            int zBufIdx = pInt.y*width + pInt.x;
+            if (zBuffer[zBufIdx] >= p.z) {
                 continue;
             }
-            zBuffer[int(p.y*width + p.x)] = p.z;
+            zBuffer[zBufIdx] = p.z;
             TGAColor color;
             bool discard = shader.fragment(bary, color);
             if (!discard) {
-                image.set(p.x, p.y, color);
+                image.set(pInt.x, pInt.y, color);
             }
         }
     }
