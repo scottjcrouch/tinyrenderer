@@ -177,13 +177,13 @@ struct Matrix2x3
 
     Matrix2x3() : m{0} { }
 
-    inline void setCol(const Vec2f& v, int columnIndex) {
+    inline void setCol(int columnIndex, const Vec2f& v) {
         assert(columnIndex >= 0 && columnIndex <= 3);
         m[0][columnIndex] = v.x;
         m[1][columnIndex] = v.y;
     }
 
-    inline void setRow(const Vec3f& v, int rowIndex) {
+    inline void setRow(int rowIndex, const Vec3f& v) {
         assert(rowIndex >= 0 && rowIndex <= 2);
         m[rowIndex][0] = v.x;
         m[rowIndex][1] = v.y;
@@ -228,14 +228,14 @@ struct Matrix3x3
         return result;
     }
 
-    inline void setCol(const Vec3f& v, int columnIndex) {
+    inline void setCol(int columnIndex, const Vec3f& v) {
         assert(columnIndex >= 0 && columnIndex <= 3);
         m[0][columnIndex] = v.x;
         m[1][columnIndex] = v.y;
         m[2][columnIndex] = v.z;
     }
 
-    inline void setRow(const Vec3f& v, int rowIndex) {
+    inline void setRow(int rowIndex, const Vec3f& v) {
         assert(rowIndex >= 0 && rowIndex <= 3);
         m[rowIndex][0] = v.x;
         m[rowIndex][1] = v.y;

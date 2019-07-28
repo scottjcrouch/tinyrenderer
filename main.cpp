@@ -16,16 +16,14 @@ const TGAColor red   = TGAColor(255,   0,   0, 255);
 const TGAColor green = TGAColor(  0, 255,   0, 255);
 const TGAColor blue  = TGAColor(  0,   0, 255, 255);
 
-// auto model(std::make_unique<Model>("obj/african_head"));
-auto model(std::make_unique<Model>("obj/diablo3_pose"));
+auto model(std::make_unique<Model>("obj/african_head"));
 
 constexpr int width = 800, height = 800, depth = 255;
 TGAImage outputImage(width, height, TGAImage::RGB);
-std::vector<float> zBuffer(width * height, std::numeric_limits<float>::lowest());
-std::vector<float> shadowBuffer(width * height, std::numeric_limits<float>::lowest());
+std::vector<float> zBuf(width * height, std::numeric_limits<float>::lowest());
+std::vector<float> shadowBuf(width * height, std::numeric_limits<float>::lowest());
 
 Vec3f lightVec = Vec3f(1, 1, 1).normalized();
-Vec3f transformedLightVec;
 
 Vec3f origin(0, 0, 0);
 Vec3f eye(1, 1, 3);
@@ -39,6 +37,7 @@ struct PhongShader : public IShader
     Matrix4x4 M;
     Matrix4x4 MIT;
     Matrix4x4 Mshadow;
+    Vec3f light;
 
     virtual Vec3f vertex(int faceIndex, int vertexIndex) {
         // Fetch vertex data from the model.
@@ -51,9 +50,9 @@ struct PhongShader : public IShader
         normal = MIT * normal;
 
         // Record data needed by the fragment shader.
-        vertexCoords.setCol(vertex, vertexIndex);
-        vertexNormals.setCol(normal, vertexIndex);
-        vertexUVs.setCol(uv, vertexIndex);
+        vertexCoords.setCol(vertexIndex, vertex);
+        vertexNormals.setCol(vertexIndex, normal);
+        vertexUVs.setCol(vertexIndex, uv);
 
         // Return the position on the display where the vertex projects.
         return viewport * vertex;
@@ -65,18 +64,17 @@ struct PhongShader : public IShader
         Vec3f objectSpaceNormal = (vertexNormals * barycentricCoords).normalized();
         Vec3f tangentSpaceNormal = model->getTangentNormal(uv);
 
-        // Get coordinates of corresponding fragment in the shadow buffer.
-        Vec3f shadowBufCoord = Mshadow * (vertexCoords * barycentricCoords);
-        // Get the index into the actual array.
-        int idx = int(shadowBufCoord.x) + int(shadowBufCoord.y)*width;
-        // Compute a coefficient to indicate being in shade or not.
-        constexpr float zFightingMagicNum = 43.34;
-        float shadow = 0.3f + 0.7f*(shadowBuffer[idx] < shadowBufCoord.z + zFightingMagicNum);
+        Vec3f globalCoord = (vertexCoords * barycentricCoords);
+        Vec3f shadowBufCoord = Mshadow * globalCoord;
+        int shadowBufIndex = int(shadowBufCoord.x) + int(shadowBufCoord.y)*width;
+        float zFightingMagicNum = 43.34;
+        bool occluded = shadowBuf[shadowBufIndex] > (shadowBufCoord.z + zFightingMagicNum);
+        float shadow = 0.3f + (occluded ? 0.0f : 0.7f);
 
         Matrix3x3 A;
-        A.setRow(vertexCoords.getCol(1) - vertexCoords.getCol(0), 0);
-        A.setRow(vertexCoords.getCol(2) - vertexCoords.getCol(0), 1);
-        A.setRow(objectSpaceNormal, 2);
+        A.setRow(0, vertexCoords.getCol(1) - vertexCoords.getCol(0));
+        A.setRow(1, vertexCoords.getCol(2) - vertexCoords.getCol(0));
+        A.setRow(2, objectSpaceNormal);
         Matrix3x3 AI = A.inverse();
         Vec2f uv0 = vertexUVs.getCol(0);
         Vec2f uv1 = vertexUVs.getCol(1);
@@ -84,34 +82,22 @@ struct PhongShader : public IShader
         Vec3f i = (AI * Vec3f(uv1.u-uv0.u, uv2.u-uv0.u, 0));
         Vec3f j = (AI * Vec3f(uv1.v-uv0.v, uv2.v-uv0.v, 0));
         Matrix3x3 tangentBasis;
-        tangentBasis.setCol(i.normalized(), 0);
-        tangentBasis.setCol(j.normalized(), 1);
-        tangentBasis.setCol(objectSpaceNormal, 2);
+        tangentBasis.setCol(0, i.normalized());
+        tangentBasis.setCol(1, j.normalized());
+        tangentBasis.setCol(2, objectSpaceNormal);
         Vec3f normal = (tangentBasis * tangentSpaceNormal).normalized();
 
-        float diffuseIntensity = normal * transformedLightVec;
+        float diffuseIntensity = std::max(normal * light, 0.0f);
         assert(diffuseIntensity <= 1.0f);
-        if (diffuseIntensity < 0.0f)
-            diffuseIntensity = 0.0f;
-        TGAColor diffuseColor = textureColor * diffuseIntensity;
 
         float specularPower = model->getSpecularPower(uv);
-        Vec3f reflection = (normal*2 - transformedLightVec).normalized();
+        Vec3f reflection = (-light + normal*(normal*light)*2).normalized();
         float specularIntensity = std::pow(std::max(reflection.z, 0.0f), specularPower);
         assert(specularIntensity <= 1.0f);
-        if (specularIntensity < 0.0f)
-            specularIntensity = 0.0f;
-        TGAColor specularColor = textureColor * specularIntensity;
 
-        constexpr float ambientCoeff = 0.1f;
-        constexpr float diffuseCoeff = 1.0f;
-        constexpr float specularCoeff = 0.6f;
         for (int i = 0; i < 3; i++) {
-            color.raw[i] =
-                std::min(textureColor.raw[i] * ambientCoeff +
-                         shadow*(diffuseColor.raw[i] * diffuseCoeff +
-                                 specularColor.raw[i] * specularCoeff),
-                         255.0f);
+            float intensity = 0.2f + shadow * (0.8f*diffuseIntensity + 0.4f*specularIntensity);
+            color.raw[i] = std::min(textureColor.raw[i] * intensity, 255.0f);
         }
 
         // Specify not to discard this fragment.
@@ -127,7 +113,7 @@ struct DepthShader : public IShader
     virtual Vec3f vertex(int faceIndex, int vertexIndex) {
         Vec3f vertex = model->getVertex(faceIndex, vertexIndex);
         vertex = M * vertex;
-        vertexCoords.setCol(vertex, vertexIndex);
+        vertexCoords.setCol(vertexIndex, vertex);
         return vertex;
     }
 
@@ -140,6 +126,11 @@ struct DepthShader : public IShader
 
 int main(int argc, char** argv)
 {
+    /*
+     * First pass where we populate the shadow buffer with depth values at
+     * each point where the light casts.
+     */
+
     lookAt(lightVec, origin, up); // Put camera at position of light source.
     view(width/8, height/8, width*3/4, height*3/4);
     project(0); // Set infinite focal length (orthogonal projection)
@@ -154,23 +145,26 @@ int main(int argc, char** argv)
             screenCoords[vertexIndex] = depthShader.vertex(faceIndex, vertexIndex);
         }
 
-        drawTriangle(screenCoords, depthShader, outputImage, shadowBuffer);
+        drawTriangle(screenCoords, depthShader, outputImage, shadowBuf);
     }
 
     outputImage.flip_vertically();
     outputImage.write_tga_file("depth.tga");
     outputImage.clear();
 
+    /*
+     * Second pass where we do our final render using said shadow buffer.
+     */
+
     lookAt(eye, origin, up);
-    view(0, 0, width, height);
+    view(width/8, height/8, width*3/4, height*3/4);
     project(-1.0f / (eye-origin).magnitude());
 
     PhongShader shader;
     shader.M = projection * modelview;
     shader.MIT = (projection * modelview).inverseTranspose();
     shader.Mshadow = depthShader.M * shader.M.inverse();
-
-    transformedLightVec = (projection * modelview * lightVec).normalized();
+    shader.light = (projection * modelview * lightVec).normalized();
 
     for (int faceIndex = 0; faceIndex < model->numFaces(); faceIndex++) {
         std::array<Vec3f, 3> screenCoords;
@@ -179,7 +173,7 @@ int main(int argc, char** argv)
             screenCoords[vertexIndex] = shader.vertex(faceIndex, vertexIndex);
         }
 
-        drawTriangle(screenCoords, shader, outputImage, zBuffer);
+        drawTriangle(screenCoords, shader, outputImage, zBuf);
     }
 
     outputImage.flip_vertically();
