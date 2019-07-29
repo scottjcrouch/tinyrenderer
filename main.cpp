@@ -16,28 +16,21 @@ const TGAColor red   = TGAColor(255,   0,   0, 255);
 const TGAColor green = TGAColor(  0, 255,   0, 255);
 const TGAColor blue  = TGAColor(  0,   0, 255, 255);
 
-auto model(std::make_unique<Model>("obj/african_head"));
+Model *model;
 
 constexpr int width = 800, height = 800, depth = 255;
-TGAImage outputImage(width, height, TGAImage::RGB);
-std::vector<float> zBuf(width * height, std::numeric_limits<float>::lowest());
-std::vector<float> shadowBuf(width * height, std::numeric_limits<float>::lowest());
-
-Vec3f lightVec = Vec3f(1, 1, 1).normalized();
-
-Vec3f origin(0, 0, 0);
-Vec3f eye(1, 1, 3);
-Vec3f up(0, 1, 0);
 
 struct PhongShader : public IShader
 {
     Matrix2x3 vertexUVs;
     Matrix3x3 vertexNormals;
     Matrix3x3 vertexCoords;
+
     Matrix4x4 M;
     Matrix4x4 MIT;
-    Matrix4x4 Mshadow;
     Vec3f light;
+    Matrix4x4 Mshadow;
+    std::vector<float> shadowBuf;
 
     virtual Vec3f vertex(int faceIndex, int vertexIndex) {
         // Fetch vertex data from the model.
@@ -124,8 +117,32 @@ struct DepthShader : public IShader
     }
 };
 
+void drawModel(Model& m, IShader& shader, TGAImage& target, std::vector<float>& zBuffer)
+{
+    model = &m;
+    for (int faceIndex = 0; faceIndex < model->numFaces(); faceIndex++) {
+        std::array<Vec3f, 3> screenCoords;
+        for (int vertexIndex = 0; vertexIndex < 3; vertexIndex++) {
+            screenCoords[vertexIndex] = shader.vertex(faceIndex, vertexIndex);
+        }
+        drawTriangle(screenCoords, shader, target, zBuffer);
+    }
+}
+
 int main(int argc, char** argv)
 {
+    TGAImage outputImage(width, height, TGAImage::RGB);
+    std::vector<float> zBuf(width * height, std::numeric_limits<float>::lowest());
+    std::vector<float> shadowBuf(width * height, std::numeric_limits<float>::lowest());
+
+    Vec3f lightVec = Vec3f(1, 1, 1).normalized();
+    Vec3f origin(0, 0, 0);
+    Vec3f eye(1, 1, 5);
+    Vec3f up(0, 1, 0);
+
+    Model head("obj/african_head");
+    Model eye_inner("obj/african_head_eye_inner");
+
     /*
      * First pass where we populate the shadow buffer with depth values at
      * each point where the light casts.
@@ -138,15 +155,8 @@ int main(int argc, char** argv)
     DepthShader depthShader;
     depthShader.M = viewport * projection * modelview;
 
-    for (int faceIndex = 0; faceIndex < model->numFaces(); faceIndex++) {
-        std::array<Vec3f, 3> screenCoords;
-
-        for (int vertexIndex = 0; vertexIndex < 3; vertexIndex++) {
-            screenCoords[vertexIndex] = depthShader.vertex(faceIndex, vertexIndex);
-        }
-
-        drawTriangle(screenCoords, depthShader, outputImage, shadowBuf);
-    }
+    drawModel(head, depthShader, outputImage, shadowBuf);
+    drawModel(eye_inner, depthShader, outputImage, shadowBuf);
 
     outputImage.flip_vertically();
     outputImage.write_tga_file("depth.tga");
@@ -165,16 +175,10 @@ int main(int argc, char** argv)
     shader.MIT = (projection * modelview).inverseTranspose();
     shader.Mshadow = depthShader.M * shader.M.inverse();
     shader.light = (projection * modelview * lightVec).normalized();
+    shader.shadowBuf = std::move(shadowBuf);
 
-    for (int faceIndex = 0; faceIndex < model->numFaces(); faceIndex++) {
-        std::array<Vec3f, 3> screenCoords;
-
-        for (int vertexIndex = 0; vertexIndex < 3; vertexIndex++) {
-            screenCoords[vertexIndex] = shader.vertex(faceIndex, vertexIndex);
-        }
-
-        drawTriangle(screenCoords, shader, outputImage, zBuf);
-    }
+    drawModel(head, shader, outputImage, zBuf);
+    drawModel(eye_inner, shader, outputImage, zBuf);
 
     outputImage.flip_vertically();
     outputImage.write_tga_file("output.tga");
