@@ -18,7 +18,7 @@ const TGAColor blue  = TGAColor(  0,   0, 255, 255);
 
 Model *model;
 
-constexpr int width = 800, height = 800, depth = 255;
+constexpr int width = 1600, height = 1600, depth = 255;
 
 struct PhongShader : public IShader
 {
@@ -83,13 +83,18 @@ struct PhongShader : public IShader
         float diffuseIntensity = std::max(normal * light, 0.0f);
         assert(diffuseIntensity <= 1.0f);
 
-        float specularPower = model->getSpecularPower(uv);
+        Vec3i specularPower = model->getSpecularPower(uv);
         Vec3f reflection = (-light + normal*(normal*light)*2).normalized();
-        float specularIntensity = std::pow(std::max(reflection.z, 0.0f), specularPower);
-        assert(specularIntensity <= 1.0f);
+        float magicPowIncr = 2;
+        Vec3f specularIntensities;
+        for (int i = 0; i < 3; i++) {
+            specularPower.raw[i] += magicPowIncr;
+            specularIntensities.raw[i] = powf(std::max(reflection.z, 0.0f), specularPower.raw[i]);
+        }
 
         for (int i = 0; i < 3; i++) {
-            float intensity = 0.2f + shadow * (0.8f*diffuseIntensity + 0.4f*specularIntensity);
+            float intensity =
+                0.2f + shadow * (0.8f*diffuseIntensity + 0.6f*specularIntensities.raw[i]);
             color.raw[i] = std::min(textureColor.raw[i] * intensity, 255.0f);
         }
 
@@ -137,11 +142,12 @@ int main(int argc, char** argv)
 
     Vec3f lightVec = Vec3f(1, 1, 1).normalized();
     Vec3f origin(0, 0, 0);
-    Vec3f eye(1, 1, 5);
+    Vec3f eye(1, 1, 3);
     Vec3f up(0, 1, 0);
 
     Model head("obj/african_head");
     Model eye_inner("obj/african_head_eye_inner");
+    Model diablo("obj/diablo3_pose");
 
     /*
      * First pass where we populate the shadow buffer with depth values at
@@ -155,8 +161,9 @@ int main(int argc, char** argv)
     DepthShader depthShader;
     depthShader.M = viewport * projection * modelview;
 
-    drawModel(head, depthShader, outputImage, shadowBuf);
-    drawModel(eye_inner, depthShader, outputImage, shadowBuf);
+    // drawModel(head, depthShader, outputImage, shadowBuf);
+    // drawModel(eye_inner, depthShader, outputImage, shadowBuf);
+    drawModel(diablo, depthShader, outputImage, shadowBuf);
 
     outputImage.flip_vertically();
     outputImage.write_tga_file("depth.tga");
@@ -177,8 +184,9 @@ int main(int argc, char** argv)
     shader.light = (projection * modelview * lightVec).normalized();
     shader.shadowBuf = std::move(shadowBuf);
 
-    drawModel(head, shader, outputImage, zBuf);
-    drawModel(eye_inner, shader, outputImage, zBuf);
+    // drawModel(head, shader, outputImage, zBuf);
+    // drawModel(eye_inner, shader, outputImage, zBuf);
+    drawModel(diablo, shader, outputImage, zBuf);
 
     outputImage.flip_vertically();
     outputImage.write_tga_file("output.tga");

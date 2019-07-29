@@ -26,7 +26,7 @@ public:
     TGAColor getTextureColor(Vec2f uv);
     Vec3f getTextureNormal(Vec2f uv);
     Vec3f getTangentNormal(Vec2f uv);
-    float getSpecularPower(Vec2f uv);
+    Vec3i getSpecularPower(Vec2f uv);
 
 private:
     bool loadObj(std::string filename);

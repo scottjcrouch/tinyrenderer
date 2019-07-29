@@ -169,7 +169,7 @@ Vec3f Model::getTangentNormal(Vec2f uv)
     return tangentNormal;
 }
 
-float Model::getSpecularPower(Vec2f uv)
+Vec3i Model::getSpecularPower(Vec2f uv)
 {
     assert(uv.u >= 0.0 && uv.u <= 1.0);
     assert(uv.v >= 0.0 && uv.v <= 1.0);
@@ -177,5 +177,11 @@ float Model::getSpecularPower(Vec2f uv)
     Vec2i texel(uv.u * specularMap.get_width(),
                 uv.v * specularMap.get_height());
 
-    return specularMap.get(texel.x, texel.y).raw[0] / 1.0f;
+    TGAColor channels = specularMap.get(texel.x, texel.y);
+
+    if (channels.bytespp == 3) {
+        return Vec3i(channels.raw[0], channels.raw[1], channels.raw[2]);
+    } else {
+        return Vec3i(channels.raw[0], channels.raw[0], channels.raw[0]);
+    }
 }
