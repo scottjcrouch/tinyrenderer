@@ -85,17 +85,17 @@ struct PhongShader : public IShader
 
         Vec3i specularPower = model->getSpecularPower(uv);
         Vec3f reflection = (-light + normal*(normal*light)*2).normalized();
-        float magicPowIncr = 2;
+        float magicPowIncr = 5;
         Vec3f specularIntensities;
         for (int i = 0; i < 3; i++) {
-            specularPower.raw[i] += magicPowIncr;
-            specularIntensities.raw[i] = powf(std::max(reflection.z, 0.0f), specularPower.raw[i]);
+            specularPower[i] += magicPowIncr;
+            specularIntensities[i] = powf(std::max(reflection.z, 0.0f), specularPower[i]);
         }
 
         for (int i = 0; i < 3; i++) {
             float intensity =
-                0.2f + shadow * (0.8f*diffuseIntensity + 0.6f*specularIntensities.raw[i]);
-            color.raw[i] = std::min(textureColor.raw[i] * intensity, 255.0f);
+                0.2f + shadow * (0.8f*diffuseIntensity + 0.6f*specularIntensities[i]);
+            color[i] = std::min(textureColor[i] * intensity, 255.0f);
         }
 
         // Specify not to discard this fragment.
@@ -161,9 +161,9 @@ int main(int argc, char** argv)
     DepthShader depthShader;
     depthShader.M = viewport * projection * modelview;
 
-    // drawModel(head, depthShader, outputImage, shadowBuf);
-    // drawModel(eye_inner, depthShader, outputImage, shadowBuf);
-    drawModel(diablo, depthShader, outputImage, shadowBuf);
+    drawModel(head, depthShader, outputImage, shadowBuf);
+    drawModel(eye_inner, depthShader, outputImage, shadowBuf);
+    // drawModel(diablo, depthShader, outputImage, shadowBuf);
 
     outputImage.flip_vertically();
     outputImage.write_tga_file("depth.tga");
@@ -184,9 +184,9 @@ int main(int argc, char** argv)
     shader.light = (projection * modelview * lightVec).normalized();
     shader.shadowBuf = std::move(shadowBuf);
 
-    // drawModel(head, shader, outputImage, zBuf);
-    // drawModel(eye_inner, shader, outputImage, zBuf);
-    drawModel(diablo, shader, outputImage, zBuf);
+    drawModel(head, shader, outputImage, zBuf);
+    drawModel(eye_inner, shader, outputImage, zBuf);
+    // drawModel(diablo, shader, outputImage, zBuf);
 
     outputImage.flip_vertically();
     outputImage.write_tga_file("output.tga");

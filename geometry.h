@@ -20,6 +20,7 @@ struct Vec2
     Vec2() : x(0), y(0) { }
     Vec2(T _x, T _y) : x(_x), y(_y) { }
 
+    inline T& operator [] (int row) { return raw[row]; }
     inline bool operator ==(const Vec2<T> &v) const { return x==v.x && y==v.y; }
     inline bool operator !=(const Vec2<T> &v) const { return !(*this == v); }
     inline Vec2<T> operator +(const Vec2<T> &v) const { return { x+v.x, y+v.y }; }
@@ -49,6 +50,7 @@ struct Vec3
     Vec3() : x(0), y(0), z(0) { }
     Vec3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) { }
 
+    inline T& operator [] (int row) { return raw[row]; }
     inline bool operator ==(const Vec3<T> &v) const { return x==v.x && y==v.y && z==v.z; }
     inline bool operator !=(const Vec3<T> &v) const { return !(*this == v); }
     inline Vec3<T> operator +(const Vec3<T> &v) const { return { x+v.x, y+v.y, z+v.z }; }
@@ -76,6 +78,8 @@ struct Vec4
     Vec4() : a(0), b(0), c(0), d(0) { }
     Vec4(T _a, T _b, T _c, T _d) : a(_a), b(_b), c(_c), d(_d) { }
     Vec4(Vec3<T> v, int _d) : a(v.x), b(v.y), c(v.z), d(_d) { }
+
+    inline T& operator [] (int row) { return raw[row]; }
 
     inline bool operator ==(const Vec4<T> &v) const {
         return a==v.a && b==v.b && c==v.c && d==v.d;
